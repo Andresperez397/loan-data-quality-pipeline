@@ -18,8 +18,8 @@ ROOT = Path(__file__).resolve().parents[2]
 NOTES = [
     "Term (months) is not a reliable approval-time field: SBA rewrites it for some loans after approval. Rule K1 "
     "counts non-standard terms, and section 3 shows terms changing between quarters.",
-    "Interest rates are missing for loans approved before FY2009 (rule C4). That is a property of the source, "
-    "so it is counted as info, not as an error.",
+    "Interest rates are missing for most loans approved through FY2009 (rule C4). That is a property of the "
+    "source, so it is counted as info; a missing rate on a later loan is a warning (rule C6).",
     "Active loans have status EXEMPT because SBA withholds their status under FOIA exemption 4.",
 ]
 

@@ -22,6 +22,7 @@ th { color: #52514e; font-weight: 600; } td.n { text-align: right; font-variant-
 .error { background: #fbe0dc; color: #8f2013; } .warning { background: #fdf1d6; color: #7a5300; }
 .info { background: #e3eef7; color: #1f5f8b; } .ok { color: #1f6f5c; font-weight: 600; }
 .note { color: #52514e; font-size: 12.5px; } code { background: #f4f6f8; padding: 1px 4px; border-radius: 3px; }
+.scroll { overflow-x: auto; } table.wide { min-width: 820px; }
 @media (max-width: 600px) { table { font-size: 12px; } th, td { padding: 4px; } }
 """
 
@@ -31,21 +32,33 @@ def _fmt(n) -> str:
 
 
 def _pct(x: float, d: int = 2) -> str:
+    if 0 < x < 10**-d / 100:
+        return f"<{10**-d:.{d}f}%"
     return f"{100 * x:.{d}f}%"
 
 
-def table(df: pd.DataFrame, cols: dict, num: set | None = None) -> str:
-    num = num or set()
+def _styles(items: list[str]) -> str:
+    """'file.csv: quoted, CamelCase' entries -> one line per distinct style with its file count."""
+    counts: dict[str, int] = {}
+    for i in items:
+        style = i.split(": ", 1)[1]
+        counts[style] = counts.get(style, 0) + 1
+    return "<br>".join(f"{html.escape(k)} ({n} file{'s' if n > 1 else ''})" for k, n in counts.items())
+
+
+def table(df: pd.DataFrame, cols: dict, num: set | None = None, raw: set | None = None, cls: str = "") -> str:
+    """Columns in `raw` already hold HTML (built from escaped parts); every other value is escaped here."""
+    num, raw = num or set(), raw or set()
     head = "".join(f"<th{' class=n' if c in num else ''}>{html.escape(lab)}</th>" for c, lab in cols.items())
     body = []
     for _, r in df.iterrows():
         cells = []
         for c in cols:
             v = r[c]
-            text = v if isinstance(v, str) and v.startswith("<") else html.escape(str(v))
+            text = str(v) if c in raw else html.escape(str(v))
             cells.append(f"<td{' class=n' if c in num else ''}>{text}</td>")
         body.append("<tr>" + "".join(cells) + "</tr>")
-    return f"<table><tr>{head}</tr>{''.join(body)}</table>"
+    return f"<div class='scroll'><table class='{cls}'><tr>{head}</tr>{''.join(body)}</table></div>"
 
 
 def render(result: dict, path_html, path_json) -> None:
@@ -78,24 +91,29 @@ def render(result: dict, path_html, path_json) -> None:
         rows = [
             (
                 "Header style",
-                "<br>".join(prev["schema"]["header_style"]),
-                "<br>".join(cur["schema"]["header_style"]),
+                _styles(prev["schema"]["header_style"]),
+                _styles(cur["schema"]["header_style"]),
             ),
             (
                 "Columns not in the contract",
-                ", ".join(prev["schema"]["unexpected"]) or "none",
-                ", ".join(cur["schema"]["unexpected"]) or "none",
+                html.escape(", ".join(prev["schema"]["unexpected"]) or "none"),
+                html.escape(", ".join(cur["schema"]["unexpected"]) or "none"),
             ),
             (
                 "Contract columns missing",
-                ", ".join(prev["schema"]["missing_optional"] + prev["schema"]["missing_required"]) or "none",
-                ", ".join(cur["schema"]["missing_optional"] + cur["schema"]["missing_required"]) or "none",
+                html.escape(
+                    ", ".join(prev["schema"]["missing_optional"] + prev["schema"]["missing_required"]) or "none"
+                ),
+                html.escape(", ".join(cur["schema"]["missing_optional"] + cur["schema"]["missing_required"]) or "none"),
             ),
         ]
         for k in sorted(set(prev["normalizations"]) | set(cur["normalizations"])):
             rows.append(
                 (
-                    k.replace("__", ": ").replace("_", " "),
+                    k.replace("__", ": ")
+                    .replace("_", " ")
+                    .replace("us date", "US date")
+                    .replace("true false", "TRUE/FALSE"),
                     _fmt(prev["normalizations"].get(k, 0)),
                     _fmt(cur["normalizations"].get(k, 0)),
                 )
@@ -105,17 +123,18 @@ def render(result: dict, path_html, path_json) -> None:
             "<h2>1. Schema and format drift between snapshots</h2>",
             "<p class='note'>The publisher changed the file format between quarters. The contract maps both "
             "formats to one schema; each fix applied is counted.</p>",
-            table(df, {"item": "Item", "prev": prev["as_of"], "cur": cur["as_of"]}),
+            table(df, {"item": "Item", "prev": prev["as_of"], "cur": cur["as_of"]}, raw={"prev", "cur"}),
             f"<p class='note'>Columns whose share of missing values changed by more than 1 point: "
             f"{html.escape(sd['null_rate_shifts']) or 'none'}.</p>",
         ]
 
     # Rule results
     r = pd.DataFrame(cur["rules"])
-    r["sev"] = [f"<span class='sev {v}'>{v}</span>" for v in r["severity"]]
+    r["sev"] = [f"<span class='sev {html.escape(v)}'>{html.escape(v)}</span>" for v in r["severity"]]
     r["failed_f"] = [(_fmt(v) if v else "<span class='ok'>0</span>") for v in r["failed"]]
-    r["rate"] = [_pct(v, 3) for v in r["fail_rate"]]
+    r["rate"] = [html.escape(_pct(v, 3)) for v in r["fail_rate"]]
     r["example"] = r["example"].fillna("")
+    r["check"] = r["check"].str.replace("_", " ")
     parts += [
         f"<h2>{'2' if prev else '1'}. Validation rules on the {html.escape(cur['as_of'])} snapshot</h2>",
         "<p class='note'>Errors keep a row out of the clean table (it goes to quarantine with the rule ids); "
@@ -126,12 +145,14 @@ def render(result: dict, path_html, path_json) -> None:
                 "rule_id": "Rule",
                 "sev": "Severity",
                 "check": "Check",
-                "description": "Rule",
+                "description": "Description",
                 "failed_f": "Rows failing",
                 "rate": "Rate",
                 "example": "Example (non-personal fields)",
             },
             {"failed_f", "rate"},
+            raw={"sev", "failed_f", "rate"},
+            cls="wide",
         ),
     ]
 
@@ -170,6 +191,13 @@ def render(result: dict, path_html, path_json) -> None:
             "(paid in full or charged off) are active or undisbursed again in the later one. A resolved loan "
             "should not reopen, so these are worth raising with the publisher.</p>",
         ]
+        pk = d["probable_key_revisions"]
+        changed = ", ".join(f"{k.replace('_', ' ')}: {_fmt(v)}" for k, v in pk["changed"].items() if v)
+        parts.append(
+            f"<p><b>{_fmt(pk['loans'])}</b> of the new loans match a removed loan on "
+            f"{html.escape(', '.join(f.replace('_', ' ') for f in pk['loose_key']))}: probably the same loan with "
+            f"a revised key field ({html.escape(changed) or 'none'}). They are counted, not merged.</p>"
+        )
         tr = pd.DataFrame(d["status_transitions"]).head(8)
         if len(tr):
             tr["loans"] = tr["loans"].map(_fmt)

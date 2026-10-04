@@ -102,8 +102,8 @@ def test_snapshot_diff(loaded, contract):
     d = diff.compare(con, "prev", "curr", contract)
     assert d["matching"] == {
         "matched": 5,  # L1-L5; L1 matches only because the ZIP and date formats were normalized
-        "only_previous": 1,  # L8
-        "only_current": 9,  # N1, E1-E6, W1, W2
+        "only_previous": 2,  # L8, L9
+        "only_current": 11,  # N1, E1-E6, W1-W3, L9 with revised jobs
         "ambiguous_previous": 2,  # L6, L7 share a key
         "ambiguous_current": 2,
     }
@@ -111,6 +111,8 @@ def test_snapshot_diff(loaded, contract):
     assert d["changed_fields"]["loan_status"] == 2  # L3, L4
     assert d["changed_fields"]["naics_code"] == 0
     assert d["resolved_loans_reopened"] == 1  # L4
+    assert d["probable_key_revisions"]["loans"] == 1  # L9
+    assert d["probable_key_revisions"]["changed"]["jobs_supported"] == 1
     assert not set(d["changed_fields"]) & set(contract["snapshot_key"])
 
 
@@ -133,5 +135,7 @@ def test_contract_rules_name_real_columns(contract):
     ids = [r["id"] for r in contract["rules"]]
     assert len(ids) == len(set(ids))
     for r in contract["rules"]:
+        # An unquoted comma in a YAML flow mapping silently splits a value into a stray key.
+        assert set(r) == {"id", "severity", "check", "columns", "description", "sql"}, r["id"]
         assert set(r["columns"]) <= known, r["id"]
         assert r["severity"] in {"error", "warning", "info"}

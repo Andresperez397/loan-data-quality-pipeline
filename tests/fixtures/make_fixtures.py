@@ -74,6 +74,7 @@ PREVIOUS = [
     loan("L6", 150_000, **DUP),
     loan("L7", 150_000, **DUP),
     loan("L8", 160_000),
+    loan("L9", 260_000),
 ]
 
 CURRENT = [
@@ -85,6 +86,7 @@ CURRENT = [
     loan("L6", 150_000, **DUP),
     loan("L7", 150_000, **DUP),
     # L8 is gone from the current snapshot.
+    loan("L9", 260_000, jobs_supported=7),  # key field revised: unmatched, but found by the loose key
     loan("N1", 170_000, approval_date=date(2026, 5, 1), approval_fy=2026, first_disbursement_date=None),
     loan("E1", 180_000, sba_guaranteed=200_000),  # X1: guarantee exceeds loan
     loan("E2", 190_000, project_state="ZZ"),  # V2: not a state code
@@ -96,10 +98,18 @@ CURRENT = [
     ),  # X7: approved after the as-of date  # fmt: skip
     loan("W1", 240_000, interest_rate=1.0),  # V6: rate below 2%
     loan("W2", 250_000, naics_code="72251"),  # V9: NAICS not six digits
+    loan(
+        "W3",
+        270_000,
+        approval_date=date(2024, 2, 1),
+        approval_fy=2024,
+        interest_rate=None,
+        first_disbursement_date=None,
+    ),  # C6: no rate on a recent loan  # fmt: skip
 ]
 
 EXPECTED_ERRORS = {"E1": "X1", "E2": "V2", "E3": "C1", "E4": "X3", "E5": "V5", "E6": "X7"}
-EXPECTED_WARNINGS = {"W1": "V6", "W2": "V9", "L6": "U1", "L7": "U1"}
+EXPECTED_WARNINGS = {"W1": "V6", "W2": "V9", "W3": "C6", "L6": "U1", "L7": "U1"}
 
 
 def _march(name: str, v) -> str:

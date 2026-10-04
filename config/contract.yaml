@@ -11,12 +11,16 @@
 #   info    - counted in the report only (known features of the source)
 
 dataset: SBA 7(a) loan-level FOIA data
-version: "1.1"
+version: "1.2"
 changelog:
   - "1.0 (2026-10-04): first version, written before any validation ran."
   - "1.1 (2026-10-04): added MH, FM and PW (the freely associated states served by SBA) to allowed state codes
     after the first run flagged 16 loans coded MH (Marshall Islands); key fields removed from the list of
     approval-time fields compared between snapshots, because a change to a key field prevents the match."
+  - "1.2 (2026-10-04): quoted the descriptions of V7 and X3 (unquoted, YAML cut them at the comma; rule logic
+    unaffected). Corrected C4: rates are missing through FY2009, not only before it. Added C6 after the run
+    showed 8 loans approved since FY2024 with no rate. Added loose_key, to report probable key revisions
+    instead of guessing at them."
 publisher: U.S. Small Business Administration
 expected_as_of_format: date
 
@@ -84,6 +88,9 @@ snapshot_key: [approval_date, gross_approval, sba_guaranteed, borrower_zip, proj
                interest_rate]
 # Fields fixed at approval that are NOT part of the key; a change in a key field shows up as an unmatched pair.
 approval_time_fields: [naics_code, project_county, business_type, term_months]
+# A looser key: an unmatched new loan that matches an unmatched removed loan on these fields is probably the same
+# loan with a revised key field. Reported as a count, never used to merge records.
+loose_key: [approval_date, gross_approval, borrower_zip, project_state]
 
 rules:
   # Completeness
@@ -95,10 +102,13 @@ rules:
   - {id: C3, severity: error, check: completeness, columns: [loan_status],
      description: Loan status is missing, sql: "loan_status IS NULL"}
   - {id: C4, severity: info, check: completeness, columns: [interest_rate, approval_fy],
-     description: Interest rate is missing (expected before FY2009),
+     description: Interest rate is missing (expected for loans approved through FY2009),
      sql: "interest_rate IS NULL"}
   - {id: C5, severity: warning, check: completeness, columns: [business_type],
      description: Business type is missing, sql: "business_type IS NULL"}
+  - {id: C6, severity: warning, check: completeness, columns: [interest_rate, approval_fy],
+     description: Interest rate is missing for a loan approved in FY2010 or later,
+     sql: "interest_rate IS NULL AND approval_fy >= 2010"}
 
   # Validity
   - {id: V1, severity: error, check: validity, columns: [loan_status],
@@ -117,7 +127,7 @@ rules:
   - {id: V6, severity: warning, check: validity, columns: [interest_rate],
      description: Interest rate is below 2% (likely an entry error), sql: "interest_rate >= 0 AND interest_rate < 2"}
   - {id: V7, severity: warning, check: validity, columns: [term_months],
-     description: Term is missing, under 1 month or over 40 years,
+     description: "Term is missing, under 1 month or over 40 years",
      sql: "term_months IS NULL OR term_months < 1 OR term_months > 480"}
   - {id: V8, severity: error, check: validity, columns: [jobs_supported],
      description: Jobs supported is negative, sql: "jobs_supported < 0"}
@@ -135,7 +145,7 @@ rules:
      description: Approval fiscal year does not match the approval date (federal FY starts October 1),
      sql: "approval_fy <> year(approval_date) + CASE WHEN month(approval_date) >= 10 THEN 1 ELSE 0 END"}
   - {id: X3, severity: error, check: consistency, columns: [loan_status, charge_off_date],
-     description: Charged-off loan has no charge-off date, or a charge-off date without charged-off status,
+     description: "Charged-off loan has no charge-off date, or a charge-off date without charged-off status",
      sql: "(loan_status = 'CHGOFF') <> (charge_off_date IS NOT NULL)"}
   - {id: X4, severity: warning, check: consistency, columns: [loan_status, paid_in_full_date],
      description: Paid-in-full loan has no paid-in-full date,

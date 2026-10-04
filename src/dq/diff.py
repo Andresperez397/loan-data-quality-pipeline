@@ -47,6 +47,25 @@ def compare(con, prev: str, curr: str, contract: dict) -> dict:
     back = con.execute("""SELECT count(*) FROM u_p p JOIN u_c c USING (snapshot_key)
                           WHERE p.loan_status IN ('PIF', 'CHGOFF') AND c.loan_status IN ('EXEMPT', 'COMMIT')""")
     out["resolved_loans_reopened"] = int(back.fetchone()[0])
+    # Unmatched new loans that match an unmatched removed loan on a looser key: probably one loan whose key
+    # field was revised. Counted, not merged.
+    loose = ", ".join(contract["loose_key"])
+    revised = [f for f in contract["snapshot_key"] if f not in contract["loose_key"]]
+    con.execute(f"""CREATE OR REPLACE TEMP TABLE probable AS
+        SELECT n.*, {", ".join(f"(n.{f} IS DISTINCT FROM g.{f}) AS changed_{f}" for f in revised)}
+        FROM (SELECT * FROM u_c ANTI JOIN u_p USING (snapshot_key)) n
+        JOIN (SELECT * FROM u_p ANTI JOIN u_c USING (snapshot_key)) g USING ({loose})""")
+    # One row per new loan, even if it matches more than one removed loan.
+    per_loan = ", ".join(f"bool_or(changed_{f}) AS changed_{f}" for f in revised)
+    pr = con.execute(
+        f"SELECT count(*), {', '.join(f'sum(changed_{f}::int)' for f in revised)} "
+        f"FROM (SELECT row_id, {per_loan} FROM probable GROUP BY row_id)"
+    ).fetchone()
+    out["probable_key_revisions"] = {
+        "loans": int(pr[0]),
+        "loose_key": contract["loose_key"],
+        "changed": {f: int(v or 0) for f, v in zip(revised, pr[1:], strict=True)},
+    }
     out["key_fields"] = contract["snapshot_key"]
     return out
 

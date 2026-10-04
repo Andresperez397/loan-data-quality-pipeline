@@ -1,0 +1,754 @@
+{
+  "dataset": "SBA 7(a) loan-level FOIA data",
+  "notes": [
+    "Term (months) is not a reliable approval-time field: SBA rewrites it for some loans after approval. Rule K1 counts non-standard terms, and section 3 shows terms changing between quarters.",
+    "Interest rates are missing for most loans approved through FY2009 (rule C4). That is a property of the source, so it is counted as info; a missing rate on a later loan is a warning (rule C6).",
+    "Active loans have status EXEMPT because SBA withholds their status under FOIA exemption 4."
+  ],
+  "previous": {
+    "files": [
+      "FOIA_7a_FY2000_FY2009_asof_260331.csv",
+      "FOIA_7a_FY2010_FY2019_asof_260331.csv",
+      "FOIA_7a_FY2020_Present_asof_260331.csv"
+    ],
+    "as_of": "2026-03-31",
+    "schema": {
+      "files": [
+        "FOIA_7a_FY2000_FY2009_asof_260331.csv",
+        "FOIA_7a_FY2010_FY2019_asof_260331.csv",
+        "FOIA_7a_FY2020_Present_asof_260331.csv"
+      ],
+      "rows": 1610065,
+      "header_style": [
+        "FOIA_7a_FY2000_FY2009_asof_260331.csv: unquoted, lowercase",
+        "FOIA_7a_FY2010_FY2019_asof_260331.csv: unquoted, lowercase",
+        "FOIA_7a_FY2020_Present_asof_260331.csv: unquoted, lowercase"
+      ],
+      "missing_required": [],
+      "missing_optional": [],
+      "unexpected": [
+        "subprogram"
+      ]
+    },
+    "normalizations": {
+      "as_of_date__us_date_format": 1610065,
+      "borrower_zip__lost_leading_zero": 124041,
+      "bank_zip__lost_leading_zero": 130997,
+      "approval_date__us_date_format": 1610065,
+      "first_disbursement_date__us_date_format": 1390061,
+      "paid_in_full_date__us_date_format": 913571,
+      "charge_off_date__us_date_format": 183834,
+      "revolver__true_false_coding": 1610065,
+      "collateral__true_false_coding": 1610065
+    }
+  },
+  "current": {
+    "files": [
+      "FOIA_7a_FY2000_FY2009_asof_260630.csv",
+      "FOIA_7a_FY2010_FY2019_asof_260630.csv",
+      "FOIA_7a_FY2020_Present_asof_260630.csv"
+    ],
+    "as_of": "2026-06-30",
+    "schema": {
+      "files": [
+        "FOIA_7a_FY2000_FY2009_asof_260630.csv",
+        "FOIA_7a_FY2010_FY2019_asof_260630.csv",
+        "FOIA_7a_FY2020_Present_asof_260630.csv"
+      ],
+      "rows": 1624422,
+      "header_style": [
+        "FOIA_7a_FY2000_FY2009_asof_260630.csv: quoted, CamelCase",
+        "FOIA_7a_FY2010_FY2019_asof_260630.csv: quoted, CamelCase",
+        "FOIA_7a_FY2020_Present_asof_260630.csv: quoted, CamelCase"
+      ],
+      "missing_required": [],
+      "missing_optional": [],
+      "unexpected": []
+    },
+    "normalizations": {
+      "loan_status__respelled": 923144
+    },
+    "rules": [
+      {
+        "rule_id": "C1",
+        "check": "completeness",
+        "severity": "error",
+        "description": "Approval date is missing or unparseable",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "C2",
+        "check": "completeness",
+        "severity": "error",
+        "description": "Loan or guarantee amount is missing or not a number",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "C3",
+        "check": "completeness",
+        "severity": "error",
+        "description": "Loan status is missing",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "C4",
+        "check": "completeness",
+        "severity": "info",
+        "description": "Interest rate is missing (expected for loans approved through FY2009)",
+        "failed": 653708,
+        "rows": 1624422,
+        "fail_rate": 0.4024249856256564,
+        "example": "interest_rate=missing; approval_fy=2000"
+      },
+      {
+        "rule_id": "C5",
+        "check": "completeness",
+        "severity": "warning",
+        "description": "Business type is missing",
+        "failed": 584,
+        "rows": 1624422,
+        "fail_rate": 0.0003595124912122589,
+        "example": "business_type=missing"
+      },
+      {
+        "rule_id": "C6",
+        "check": "completeness",
+        "severity": "warning",
+        "description": "Interest rate is missing for a loan approved in FY2010 or later",
+        "failed": 8,
+        "rows": 1624422,
+        "fail_rate": 4.924828646743272e-06,
+        "example": "interest_rate=missing; approval_fy=2024"
+      },
+      {
+        "rule_id": "V1",
+        "check": "validity",
+        "severity": "error",
+        "description": "Loan status is not one of the documented codes",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "V2",
+        "check": "validity",
+        "severity": "error",
+        "description": "Project state is not a valid U.S. state or territory code",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "V3",
+        "check": "validity",
+        "severity": "warning",
+        "description": "Borrower ZIP is not five digits after normalization",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "V4",
+        "check": "validity",
+        "severity": "error",
+        "description": "Loan amount is zero or negative",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "V5",
+        "check": "validity",
+        "severity": "error",
+        "description": "Interest rate is outside 0-25%",
+        "failed": 2,
+        "rows": 1624422,
+        "fail_rate": 1.231207161685818e-06,
+        "example": "interest_rate=56.0"
+      },
+      {
+        "rule_id": "V6",
+        "check": "validity",
+        "severity": "warning",
+        "description": "Interest rate is below 2% (likely an entry error)",
+        "failed": 1121,
+        "rows": 1624422,
+        "fail_rate": 0.000690091614124901,
+        "example": "interest_rate=1.75"
+      },
+      {
+        "rule_id": "V7",
+        "check": "validity",
+        "severity": "warning",
+        "description": "Term is missing, under 1 month or over 40 years",
+        "failed": 1156,
+        "rows": 1624422,
+        "fail_rate": 0.0007116377394544029,
+        "example": "term_months=0.0"
+      },
+      {
+        "rule_id": "V8",
+        "check": "validity",
+        "severity": "error",
+        "description": "Jobs supported is negative",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "V9",
+        "check": "validity",
+        "severity": "warning",
+        "description": "NAICS code is missing or not six digits",
+        "failed": 19779,
+        "rows": 1624422,
+        "fail_rate": 0.012176023225491899,
+        "example": "naics_code=missing"
+      },
+      {
+        "rule_id": "V10",
+        "check": "validity",
+        "severity": "warning",
+        "description": "Business type is not one of the documented values",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "X1",
+        "check": "consistency",
+        "severity": "error",
+        "description": "SBA guarantee exceeds the loan amount",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "X2",
+        "check": "consistency",
+        "severity": "error",
+        "description": "Approval fiscal year does not match the approval date (federal FY starts October 1)",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "X3",
+        "check": "consistency",
+        "severity": "error",
+        "description": "Charged-off loan has no charge-off date, or a charge-off date without charged-off status",
+        "failed": 20,
+        "rows": 1624422,
+        "fail_rate": 1.231207161685818e-05,
+        "example": "loan_status=CHGOFF; charge_off_date=missing"
+      },
+      {
+        "rule_id": "X4",
+        "check": "consistency",
+        "severity": "warning",
+        "description": "Paid-in-full loan has no paid-in-full date",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "X5",
+        "check": "consistency",
+        "severity": "error",
+        "description": "Charge-off date is before the approval date",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "X6",
+        "check": "consistency",
+        "severity": "warning",
+        "description": "Charge-off amount exceeds the loan amount",
+        "failed": 5267,
+        "rows": 1624422,
+        "fail_rate": 0.0032423840602996017,
+        "example": "charge_off_amount=72245.5; gross_approval=50000.0"
+      },
+      {
+        "rule_id": "X7",
+        "check": "consistency",
+        "severity": "error",
+        "description": "Approval date is after the snapshot date",
+        "failed": 0,
+        "rows": 1624422,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "X8",
+        "check": "consistency",
+        "severity": "warning",
+        "description": "First disbursement is before approval",
+        "failed": 434,
+        "rows": 1624422,
+        "fail_rate": 0.0002671719540858225,
+        "example": "first_disbursement_date=1999-10-31; approval_date=1999-12-23"
+      },
+      {
+        "rule_id": "K1",
+        "check": "known_issue",
+        "severity": "info",
+        "description": "Term is not a standard contractual length (SBA rewrites the term of some loans after approval)",
+        "failed": 403496,
+        "rows": 1624422,
+        "fail_rate": 0.24839358245579043,
+        "example": "term_months=306.0; loan_status=PIF"
+      },
+      {
+        "rule_id": "U1",
+        "check": "uniqueness",
+        "severity": "warning",
+        "description": "Snapshot key is shared with another loan (cannot be tracked across snapshots)",
+        "failed": 16509,
+        "rows": 1624422,
+        "fail_rate": 0.010162999516135585,
+        "example": null
+      }
+    ],
+    "split": {
+      "rows": 1624422,
+      "quarantined": 22,
+      "flagged": 44497,
+      "clean": 1624400,
+      "pii_columns_dropped": [
+        "borrower_name",
+        "borrower_street"
+      ]
+    }
+  },
+  "diff": {
+    "rows": {
+      "previous": 1610065,
+      "current": 1624422,
+      "change": 14357
+    },
+    "matching": {
+      "matched": 1592944,
+      "only_previous": 662,
+      "only_current": 14969,
+      "ambiguous_previous": 16459,
+      "ambiguous_current": 16509
+    },
+    "new_loans_by_fy": {
+      "2026": 14569,
+      "2025": 76,
+      "2024": 52,
+      "2023": 29,
+      "2022": 22,
+      "2021": 24,
+      "2020": 10,
+      "2019": 8,
+      "2018": 4,
+      "2017": 4,
+      "2016": 2,
+      "2012": 1,
+      "2009": 2,
+      "2008": 3,
+      "2007": 6,
+      "2006": 16,
+      "2005": 58,
+      "2004": 6,
+      "2003": 6,
+      "2002": 13,
+      "2001": 4,
+      "2000": 54
+    },
+    "changed_fields": {
+      "naics_code": 83,
+      "project_county": 24,
+      "business_type": 154,
+      "term_months": 1287,
+      "loan_status": 22973,
+      "charge_off_date": 2069,
+      "paid_in_full_date": 9648
+    },
+    "status_transitions": [
+      {
+        "previous": "EXEMPT",
+        "current": "PIF",
+        "loans": 9277
+      },
+      {
+        "previous": "COMMIT",
+        "current": "EXEMPT",
+        "loans": 8159
+      },
+      {
+        "previous": "COMMIT",
+        "current": "CANCLD",
+        "loans": 3355
+      },
+      {
+        "previous": "EXEMPT",
+        "current": "CHGOFF",
+        "loans": 1790
+      },
+      {
+        "previous": "CHGOFF",
+        "current": "PIF",
+        "loans": 253
+      },
+      {
+        "previous": "PIF",
+        "current": "EXEMPT",
+        "loans": 59
+      },
+      {
+        "previous": "COMMIT",
+        "current": "PIF",
+        "loans": 48
+      },
+      {
+        "previous": "CHGOFF",
+        "current": "EXEMPT",
+        "loans": 14
+      },
+      {
+        "previous": "CANCLD",
+        "current": "EXEMPT",
+        "loans": 7
+      },
+      {
+        "previous": "PIF",
+        "current": "CHGOFF",
+        "loans": 4
+      },
+      {
+        "previous": "CANCLD",
+        "current": "COMMIT",
+        "loans": 3
+      },
+      {
+        "previous": "EXEMPT",
+        "current": "COMMIT",
+        "loans": 2
+      },
+      {
+        "previous": "CANCLD",
+        "current": "PIF",
+        "loans": 1
+      },
+      {
+        "previous": "PIF",
+        "current": "CANCLD",
+        "loans": 1
+      }
+    ],
+    "term_changes_by_status": [
+      {
+        "status_now": "EXEMPT",
+        "loans": 1129
+      },
+      {
+        "status_now": "COMMIT",
+        "loans": 63
+      },
+      {
+        "status_now": "CANCLD",
+        "loans": 44
+      },
+      {
+        "status_now": "PIF",
+        "loans": 38
+      },
+      {
+        "status_now": "CHGOFF",
+        "loans": 13
+      }
+    ],
+    "resolved_loans_reopened": 73,
+    "probable_key_revisions": {
+      "loans": 200,
+      "loose_key": [
+        "approval_date",
+        "gross_approval",
+        "borrower_zip",
+        "project_state"
+      ],
+      "changed": {
+        "sba_guaranteed": 120,
+        "jobs_supported": 81,
+        "interest_rate": 0
+      }
+    },
+    "key_fields": [
+      "approval_date",
+      "gross_approval",
+      "sba_guaranteed",
+      "borrower_zip",
+      "project_state",
+      "jobs_supported",
+      "interest_rate"
+    ]
+  },
+  "schema_drift": {
+    "null_rate_shifts": "",
+    "null_rates": [
+      {
+        "column": "as_of_date",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "program",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "lender_id",
+        "null_previous": 2.1117159866216583e-05,
+        "null_current": 1.0465260874329453e-05,
+        "change": -1.065189899188713e-05
+      },
+      {
+        "column": "borrower_city",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "borrower_state",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "borrower_zip",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "bank_name",
+        "null_previous": 2.1117159866216583e-05,
+        "null_current": 1.0465260874329453e-05,
+        "change": -1.065189899188713e-05
+      },
+      {
+        "column": "bank_fdic_number",
+        "null_previous": 0.0919546726374401,
+        "null_current": 0.09288719310622486,
+        "change": 0.0009325204687847533
+      },
+      {
+        "column": "bank_ncua_number",
+        "null_previous": 0.9762649334033098,
+        "null_current": 0.9756842741602859,
+        "change": -0.0005806592430238622
+      },
+      {
+        "column": "bank_street",
+        "null_previous": 2.1117159866216583e-05,
+        "null_current": 1.0465260874329453e-05,
+        "change": -1.065189899188713e-05
+      },
+      {
+        "column": "bank_city",
+        "null_previous": 2.1117159866216583e-05,
+        "null_current": 1.0465260874329453e-05,
+        "change": -1.065189899188713e-05
+      },
+      {
+        "column": "bank_state",
+        "null_previous": 2.1117159866216583e-05,
+        "null_current": 1.292767519770109e-05,
+        "change": -8.189484668515493e-06
+      },
+      {
+        "column": "bank_zip",
+        "null_previous": 2.1117159866216583e-05,
+        "null_current": 1.0465260874329453e-05,
+        "change": -1.065189899188713e-05
+      },
+      {
+        "column": "gross_approval",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "sba_guaranteed",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "approval_date",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "approval_fy",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "first_disbursement_date",
+        "null_previous": 0.13664293056491508,
+        "null_current": 0.1365365650058913,
+        "change": -0.00010636555902376887
+      },
+      {
+        "column": "processing_method",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "interest_rate",
+        "null_previous": 0.40601280072543655,
+        "null_current": 0.4024249856256564,
+        "change": -0.0035878150997801783
+      },
+      {
+        "column": "fixed_or_variable",
+        "null_previous": 0.4060121796324993,
+        "null_current": 0.40242437002207554,
+        "change": -0.0035878096104237645
+      },
+      {
+        "column": "term_months",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "naics_code",
+        "null_previous": 0.012284597205702876,
+        "null_current": 0.012176023225491899,
+        "change": -0.00010857398021097732
+      },
+      {
+        "column": "naics_description",
+        "null_previous": 0.012285218298640117,
+        "null_current": 0.012176638829072741,
+        "change": -0.00010857946956737557
+      },
+      {
+        "column": "franchise_code",
+        "null_previous": 0.9180635564402679,
+        "null_current": 0.9176513245942249,
+        "change": -0.00041223184604299856
+      },
+      {
+        "column": "franchise_name",
+        "null_previous": 0.9182300093474487,
+        "null_current": 0.9178181531646333,
+        "change": -0.0004118561828153622
+      },
+      {
+        "column": "project_county",
+        "null_previous": 0.00021800362097182413,
+        "null_current": 0.0002160768568758611,
+        "change": -1.9267640959630373e-06
+      },
+      {
+        "column": "project_state",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "sba_district_office",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "congressional_district",
+        "null_previous": 0.0014943496070034439,
+        "null_current": 0.001483604629831411,
+        "change": -1.0744977172032991e-05
+      },
+      {
+        "column": "business_type",
+        "null_previous": 0.0004037104092070817,
+        "null_current": 0.0003595124912122589,
+        "change": -4.419791799482279e-05
+      },
+      {
+        "column": "business_age",
+        "null_previous": 0.0012719983354709283,
+        "null_current": 0.0012841490696383082,
+        "change": 1.2150734167379936e-05
+      },
+      {
+        "column": "loan_status",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "paid_in_full_date",
+        "null_previous": 0.43258750423119563,
+        "null_current": 0.43170863236277274,
+        "change": -0.0008788718684228924
+      },
+      {
+        "column": "charge_off_date",
+        "null_previous": 0.8858220009751159,
+        "null_current": 0.8858812549940841,
+        "change": 5.9254018968224464e-05
+      },
+      {
+        "column": "charge_off_amount",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "revolver",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "jobs_supported",
+        "null_previous": 1.2421858744833284e-06,
+        "null_current": 1.231207161685818e-06,
+        "change": -1.0978712797510368e-08
+      },
+      {
+        "column": "collateral",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "sold_secondary_market",
+        "null_previous": 0.7635772468813371,
+        "null_current": 0.7622391225925284,
+        "change": -0.0013381242888087508
+      }
+    ]
+  }
+}
