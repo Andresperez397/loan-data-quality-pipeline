@@ -17,14 +17,30 @@ h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 17px; margin: 28px 0 8p
 .tile .v { font-size: 22px; font-weight: 700; } .tile .l { color: #52514e; font-size: 12px; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 6px 0; }
 th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e4e3df; vertical-align: top; }
-th { color: #52514e; font-weight: 600; } td.n { text-align: right; font-variant-numeric: tabular-nums; }
+th { color: #52514e; font-weight: 600; } th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; }
 .sev { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
 .error { background: #fbe0dc; color: #8f2013; } .warning { background: #fdf1d6; color: #7a5300; }
 .info { background: #e3eef7; color: #1f5f8b; } .ok { color: #1f6f5c; font-weight: 600; }
 .note { color: #52514e; font-size: 12.5px; } code { background: #f4f6f8; padding: 1px 4px; border-radius: 3px; }
 .scroll { overflow-x: auto; } table.wide { min-width: 820px; }
+@media print { body { max-width: none; padding: 0; font-size: 11px; } table { font-size: 10px; }
+  table.wide { min-width: 0; } .scroll { overflow: visible; } h2 { break-after: avoid; } tr { break-inside: avoid; }
+  .tile .v { font-size: 18px; } a { color: inherit; } }
 @media (max-width: 600px) { table { font-size: 12px; } th, td { padding: 4px; } }
 """
+
+
+LABELS = {
+    "naics_code": "NAICS code", "project_county": "county", "business_type": "business type",
+    "term_months": "term (months)", "loan_status": "loan status", "charge_off_date": "charge-off date",
+    "paid_in_full_date": "paid-in-full date", "sba_guaranteed": "SBA guarantee", "jobs_supported": "jobs supported",
+    "interest_rate": "interest rate", "approval_date": "approval date", "gross_approval": "loan amount",
+    "borrower_zip": "borrower ZIP", "project_state": "project state",
+}  # fmt: skip
+
+
+def _label(field: str) -> str:
+    return LABELS.get(field, field.replace("_", " "))
 
 
 def _fmt(n) -> str:
@@ -181,7 +197,7 @@ def render(result: dict, path_html, path_json) -> None:
                 {"b", "c"},
             ),
         ]
-        ch = pd.DataFrame([{"field": k, "n": _fmt(v)} for k, v in d["changed_fields"].items()])
+        ch = pd.DataFrame([{"field": _label(k), "n": _fmt(v)} for k, v in d["changed_fields"].items()])
         parts += [
             "<p>Matched loans whose field changed between the two snapshots. Status and dates are expected to "
             "change; the others were fixed at approval. (Key fields cannot appear here: a loan whose key field "
@@ -192,10 +208,10 @@ def render(result: dict, path_html, path_json) -> None:
             "should not reopen, so these are worth raising with the publisher.</p>",
         ]
         pk = d["probable_key_revisions"]
-        changed = ", ".join(f"{k.replace('_', ' ')}: {_fmt(v)}" for k, v in pk["changed"].items() if v)
+        changed = ", ".join(f"{_label(k)}: {_fmt(v)}" for k, v in pk["changed"].items() if v)
         parts.append(
             f"<p><b>{_fmt(pk['loans'])}</b> of the new loans match a removed loan on "
-            f"{html.escape(', '.join(f.replace('_', ' ') for f in pk['loose_key']))}: probably the same loan with "
+            f"{html.escape(', '.join(_label(f) for f in pk['loose_key']))}: probably the same loan with "
             f"a revised key field ({html.escape(changed) or 'none'}). They are counted, not merged.</p>"
         )
         tr = pd.DataFrame(d["status_transitions"]).head(8)

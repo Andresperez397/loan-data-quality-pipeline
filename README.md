@@ -9,7 +9,7 @@ The U.S. Small Business Administration republishes its loan-level 7(a) data ever
 - compares the release with the previous quarter, loan by loan
 - writes an HTML quality report and a machine-readable JSON file.
 
-**Sample report:** [reports/quality_report.html](reports/quality_report.html) (download and open in a browser) · [JSON](reports/quality_report.json)
+**Sample report:** [PDF](reports/quality_report.pdf) (opens on GitHub) · [HTML](reports/quality_report.html) (download and open in a browser) · [JSON](reports/quality_report.json)
 
 **Data:** SBA 7(a) loan-level FOIA data, snapshots as of 2026-03-31 (1,610,065 loans) and 2026-06-30 (1,624,422 loans), public domain.
 **Stack:** Python, DuckDB (SQL), YAML data contract, pytest, GitHub Actions.
@@ -130,5 +130,5 @@ config/contract.yaml      data contract: schema, PII flags, allowed values, rule
 src/dq/                   ingest.py, validate.py, diff.py, report.py, cli.py
 tests/                    synthetic fixtures with planted problems, pytest suite
 scripts/fetch_data.py     download and checksum the two releases
-reports/                  sample report (HTML, JSON, preview image)
+reports/                  sample report (HTML, PDF, JSON, preview image)
 ```
