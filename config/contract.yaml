@@ -11,7 +11,12 @@
 #   info    - counted in the report only (known features of the source)
 
 dataset: SBA 7(a) loan-level FOIA data
-version: "1.0"
+version: "1.1"
+changelog:
+  - "1.0 (2026-10-04): first version, written before any validation ran."
+  - "1.1 (2026-10-04): added MH, FM and PW (the freely associated states served by SBA) to allowed state codes
+    after the first run flagged 16 loans coded MH (Marshall Islands); key fields removed from the list of
+    approval-time fields compared between snapshots, because a change to a key field prevents the match."
 publisher: U.S. Small Business Administration
 expected_as_of_format: date
 
@@ -72,12 +77,13 @@ allowed:
   fixed_or_variable: [F, V]
   states: [AL, AK, AZ, AR, CA, CO, CT, DE, DC, FL, GA, HI, ID, IL, IN, IA, KS, KY, LA, ME, MD, MA, MI, MN, MS, MO,
            MT, NE, NV, NH, NJ, NM, NY, NC, ND, OH, OK, OR, PA, RI, SC, SD, TN, TX, UT, VT, VA, WA, WV, WI, WY,
-           PR, GU, VI, AS, MP]
+           PR, GU, VI, AS, MP, MH, FM, PW]
 
 # Fields fixed at approval: used to match the same loan across snapshots and expected not to change.
 snapshot_key: [approval_date, gross_approval, sba_guaranteed, borrower_zip, project_state, jobs_supported,
                interest_rate]
-approval_time_fields: [sba_guaranteed, naics_code, project_county, business_type, jobs_supported, term_months]
+# Fields fixed at approval that are NOT part of the key; a change in a key field shows up as an unmatched pair.
+approval_time_fields: [naics_code, project_county, business_type, term_months]
 
 rules:
   # Completeness
