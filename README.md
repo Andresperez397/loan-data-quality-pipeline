@@ -1,5 +1,7 @@
 # Loan data quality pipeline: validating a 1.6-million-row public dataset that changes every quarter
 
+[![tests](https://github.com/Andresperez397/loan-data-quality-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Andresperez397/loan-data-quality-pipeline/actions/workflows/ci.yml)
+
 The U.S. Small Business Administration republishes its loan-level 7(a) data every quarter. Each release replaces the last, so a user who loads the new file has no record of what changed. This pipeline checks each release against a written data contract before anyone uses it:
 - maps changing file formats to one schema and counts every fix
 - runs 26 validation rules in SQL
