@@ -1,0 +1,154 @@
+# Data contract for the SBA 7(a) loan-level FOIA extract.
+#
+# Written before any validation was run. Each column has a canonical name, a type, the source header it
+# comes from (headers are matched case-insensitively, so "approvaldate" and "ApprovalDate" are the same),
+# and whether it holds personal information. Columns marked pii are read only to be dropped: they never
+# appear in any output.
+#
+# Rules are SQL expressions that are TRUE when a row FAILS. Severity:
+#   error   - the row is quarantined and kept out of the clean table
+#   warning - the row stays in the clean table and is flagged
+#   info    - counted in the report only (known features of the source)
+
+dataset: SBA 7(a) loan-level FOIA data
+version: "1.0"
+publisher: U.S. Small Business Administration
+expected_as_of_format: date
+
+columns:
+  as_of_date:            {source: asofdate, type: date, required: true}
+  program:               {source: _program, type: string, required: true}
+  lender_id:             {source: locationid, type: string}
+  borrower_name:         {source: borrname, type: string, pii: true}
+  borrower_street:       {source: borrstreet, type: string, pii: true}
+  borrower_city:         {source: borrcity, type: string}
+  borrower_state:        {source: borrstate, type: string}
+  borrower_zip:          {source: borrzip, type: zip}
+  bank_name:             {source: bankname, type: string}
+  bank_fdic_number:      {source: bankfdicnumber, type: string}
+  bank_ncua_number:      {source: bankncuanumber, type: string}
+  bank_street:           {source: bankstreet, type: string}
+  bank_city:             {source: bankcity, type: string}
+  bank_state:            {source: bankstate, type: string}
+  bank_zip:              {source: bankzip, type: zip}
+  gross_approval:        {source: grossapproval, type: number, required: true}
+  sba_guaranteed:        {source: sbaguaranteedapproval, type: number, required: true}
+  approval_date:         {source: approvaldate, type: date, required: true}
+  approval_fy:           {source: approvalfy, type: integer, required: true}
+  first_disbursement_date: {source: firstdisbursementdate, type: date}
+  processing_method:     {source: processingmethod, type: string}
+  interest_rate:         {source: initialinterestrate, type: number}
+  fixed_or_variable:     {source: fixedorvariableinterestind, type: string}
+  term_months:           {source: terminmonths, type: number}
+  naics_code:            {source: naicscode, type: string}
+  naics_description:     {source: naicsdescription, type: string}
+  franchise_code:        {source: franchisecode, type: string}
+  franchise_name:        {source: franchisename, type: string}
+  project_county:        {source: projectcounty, type: string}
+  project_state:         {source: projectstate, type: string}
+  sba_district_office:   {source: sbadistrictoffice, type: string}
+  congressional_district: {source: congressionaldistrict, type: string}
+  business_type:         {source: businesstype, type: string}
+  business_age:          {source: businessage, type: string}
+  loan_status:           {source: loanstatus, type: status, required: true}
+  paid_in_full_date:     {source: paidinfulldate, type: date}
+  charge_off_date:       {source: chargeoffdate, type: date}
+  charge_off_amount:     {source: grosschargeoffamount, type: number}
+  revolver:              {source: revolverstatus, type: boolean}
+  jobs_supported:        {source: jobssupported, type: number}
+  collateral:            {source: collateralind, type: boolean}
+  sold_secondary_market: {source: soldsecmrktind, type: boolean}
+
+# Value normalization applied before validation; every change is counted in the report.
+normalize:
+  loan_status: {"P I F": "PIF"}
+  boolean_true: ["Y", "TRUE", "T", "1"]
+  boolean_false: ["N", "FALSE", "F", "0"]
+  date_formats: ["%Y-%m-%d", "%m/%d/%Y"]
+
+allowed:
+  loan_status: [PIF, EXEMPT, CANCLD, CHGOFF, COMMIT]
+  business_type: [CORPORATION, INDIVIDUAL, PARTNERSHIP]
+  fixed_or_variable: [F, V]
+  states: [AL, AK, AZ, AR, CA, CO, CT, DE, DC, FL, GA, HI, ID, IL, IN, IA, KS, KY, LA, ME, MD, MA, MI, MN, MS, MO,
+           MT, NE, NV, NH, NJ, NM, NY, NC, ND, OH, OK, OR, PA, RI, SC, SD, TN, TX, UT, VT, VA, WA, WV, WI, WY,
+           PR, GU, VI, AS, MP]
+
+# Fields fixed at approval: used to match the same loan across snapshots and expected not to change.
+snapshot_key: [approval_date, gross_approval, sba_guaranteed, borrower_zip, project_state, jobs_supported,
+               interest_rate]
+approval_time_fields: [sba_guaranteed, naics_code, project_county, business_type, jobs_supported, term_months]
+
+rules:
+  # Completeness
+  - {id: C1, severity: error, check: completeness, columns: [approval_date],
+     description: Approval date is missing or unparseable, sql: "approval_date IS NULL"}
+  - {id: C2, severity: error, check: completeness, columns: [gross_approval, sba_guaranteed],
+     description: Loan or guarantee amount is missing or not a number,
+     sql: "gross_approval IS NULL OR sba_guaranteed IS NULL"}
+  - {id: C3, severity: error, check: completeness, columns: [loan_status],
+     description: Loan status is missing, sql: "loan_status IS NULL"}
+  - {id: C4, severity: info, check: completeness, columns: [interest_rate, approval_fy],
+     description: Interest rate is missing (expected before FY2009),
+     sql: "interest_rate IS NULL"}
+  - {id: C5, severity: warning, check: completeness, columns: [business_type],
+     description: Business type is missing, sql: "business_type IS NULL"}
+
+  # Validity
+  - {id: V1, severity: error, check: validity, columns: [loan_status],
+     description: Loan status is not one of the documented codes,
+     sql: "loan_status NOT IN ('PIF','EXEMPT','CANCLD','CHGOFF','COMMIT')"}
+  - {id: V2, severity: error, check: validity, columns: [project_state],
+     description: Project state is not a valid U.S. state or territory code,
+     sql: "project_state IS NULL OR project_state NOT IN ({states})"}
+  - {id: V3, severity: warning, check: validity, columns: [borrower_zip],
+     description: Borrower ZIP is not five digits after normalization,
+     sql: "borrower_zip IS NULL OR NOT regexp_matches(borrower_zip, '^[0-9]{5}$')"}
+  - {id: V4, severity: error, check: validity, columns: [gross_approval],
+     description: Loan amount is zero or negative, sql: "gross_approval <= 0"}
+  - {id: V5, severity: error, check: validity, columns: [interest_rate],
+     description: Interest rate is outside 0-25%, sql: "interest_rate < 0 OR interest_rate > 25"}
+  - {id: V6, severity: warning, check: validity, columns: [interest_rate],
+     description: Interest rate is below 2% (likely an entry error), sql: "interest_rate >= 0 AND interest_rate < 2"}
+  - {id: V7, severity: warning, check: validity, columns: [term_months],
+     description: Term is missing, under 1 month or over 40 years,
+     sql: "term_months IS NULL OR term_months < 1 OR term_months > 480"}
+  - {id: V8, severity: error, check: validity, columns: [jobs_supported],
+     description: Jobs supported is negative, sql: "jobs_supported < 0"}
+  - {id: V9, severity: warning, check: validity, columns: [naics_code],
+     description: NAICS code is missing or not six digits,
+     sql: "naics_code IS NULL OR NOT regexp_matches(naics_code, '^[0-9]{6}$')"}
+  - {id: V10, severity: warning, check: validity, columns: [business_type],
+     description: Business type is not one of the documented values,
+     sql: "business_type IS NOT NULL AND business_type NOT IN ('CORPORATION','INDIVIDUAL','PARTNERSHIP')"}
+
+  # Consistency across fields
+  - {id: X1, severity: error, check: consistency, columns: [sba_guaranteed, gross_approval],
+     description: SBA guarantee exceeds the loan amount, sql: "sba_guaranteed > gross_approval"}
+  - {id: X2, severity: error, check: consistency, columns: [approval_fy, approval_date],
+     description: Approval fiscal year does not match the approval date (federal FY starts October 1),
+     sql: "approval_fy <> year(approval_date) + CASE WHEN month(approval_date) >= 10 THEN 1 ELSE 0 END"}
+  - {id: X3, severity: error, check: consistency, columns: [loan_status, charge_off_date],
+     description: Charged-off loan has no charge-off date, or a charge-off date without charged-off status,
+     sql: "(loan_status = 'CHGOFF') <> (charge_off_date IS NOT NULL)"}
+  - {id: X4, severity: warning, check: consistency, columns: [loan_status, paid_in_full_date],
+     description: Paid-in-full loan has no paid-in-full date,
+     sql: "loan_status = 'PIF' AND paid_in_full_date IS NULL"}
+  - {id: X5, severity: error, check: consistency, columns: [charge_off_date, approval_date],
+     description: Charge-off date is before the approval date, sql: "charge_off_date < approval_date"}
+  - {id: X6, severity: warning, check: consistency, columns: [charge_off_amount, gross_approval],
+     description: Charge-off amount exceeds the loan amount, sql: "charge_off_amount > gross_approval"}
+  - {id: X7, severity: error, check: consistency, columns: [approval_date, as_of_date],
+     description: Approval date is after the snapshot date, sql: "approval_date > as_of_date"}
+  - {id: X8, severity: warning, check: consistency, columns: [first_disbursement_date, approval_date],
+     description: First disbursement is before approval,
+     sql: "first_disbursement_date < approval_date"}
+
+  # Known features of the source (counted, not failures)
+  - {id: K1, severity: info, check: known_issue, columns: [term_months, loan_status],
+     description: Term is not a standard contractual length (SBA rewrites the term of some loans after approval),
+     sql: "term_months IS NOT NULL AND term_months NOT IN (12, 24, 36, 48, 60, 72, 84, 96, 120, 180, 240, 300)"}
+
+  # Uniqueness
+  - {id: U1, severity: warning, check: uniqueness, columns: [snapshot_key],
+     description: Snapshot key is shared with another loan (cannot be tracked across snapshots), sql: "key_count > 1"}
