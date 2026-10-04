@@ -1,7 +1,7 @@
 # Data contract for the SBA 7(a) loan-level FOIA extract.
 #
-# Written before any validation was run. Each column has a canonical name, a type, the source header it
-# comes from (headers are matched case-insensitively, so "approvaldate" and "ApprovalDate" are the same),
+# Version 1.0 was written before any validation was run; later changes are listed in the changelog.
+# Each column has a canonical name, a type, the source header it comes from (headers are matched case-insensitively, so "approvaldate" and "ApprovalDate" are the same),
 # and whether it holds personal information. Columns marked pii are read only to be dropped: they never
 # appear in any output.
 #

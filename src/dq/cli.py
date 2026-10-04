@@ -72,7 +72,9 @@ def main() -> None:
     a = p.parse_args()
     r = run(a.current, a.previous, Path(a.out), Path(a.contract))
     s = r["current"]["split"]
-    print(f"{s['rows']:,} rows: {s['clean']:,} clean, {s['quarantined']:,} quarantined, {s['flagged']:,} flagged")
+    print(
+        f"{s['rows']:,} rows: {s['clean']:,} in clean table, {s['quarantined']:,} quarantined, {s['flagged']:,} flagged"
+    )
 
 
 if __name__ == "__main__":

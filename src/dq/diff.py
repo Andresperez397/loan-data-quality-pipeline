@@ -1,4 +1,4 @@
-"""Compare two normalized snapshots: schema and format drift, row counts, and changes to existing loans.
+"""Compare two normalized snapshots: row counts, loan matching, changes to existing loans and null-rate drift.
 
 Loans are matched on a key built from fields fixed at approval (no names or addresses). Keys shared by
 more than one loan in either snapshot are reported as unmatchable instead of guessed.
@@ -43,7 +43,7 @@ def compare(con, prev: str, curr: str, contract: dict) -> dict:
                           FROM u_p p JOIN u_c c USING (snapshot_key)
                           WHERE p.term_months IS DISTINCT FROM c.term_months GROUP BY 1 ORDER BY 2 DESC, 1""").fetchdf()
     out["term_changes_by_status"] = term.to_dict(orient="records")
-    # Changes that should not happen to an approval-time field, for example a loan that moved backwards.
+    # A resolved loan (paid in full or charged off) should not become active or undisbursed again.
     back = con.execute("""SELECT count(*) FROM u_p p JOIN u_c c USING (snapshot_key)
                           WHERE p.loan_status IN ('PIF', 'CHGOFF') AND c.loan_status IN ('EXEMPT', 'COMMIT')""")
     out["resolved_loans_reopened"] = int(back.fetchone()[0])

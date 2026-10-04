@@ -68,7 +68,7 @@ def render(result: dict, path_html, path_json) -> None:
     s = cur["split"]
     tiles = [
         ("Rows checked", _fmt(s["rows"])),
-        ("Clean", _fmt(s["clean"])),
+        ("In clean table (no errors)", _fmt(s["clean"])),
         ("Quarantined (errors)", _fmt(s["quarantined"])),
         ("Flagged (warnings)", _fmt(s["flagged"])),
         ("Rules", str(len(cur["rules"]))),

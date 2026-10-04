@@ -1,8 +1,8 @@
 # Loan data quality pipeline: validating a 1.6-million-row public dataset that changes every quarter
 
-The U.S. Small Business Administration republishes its loan-level 7(a) data every quarter. Each release replaces the last, and nothing tells users what changed. This pipeline checks each release against a written data contract before anyone uses it:
+The U.S. Small Business Administration republishes its loan-level 7(a) data every quarter. Each release replaces the last, so a user who loads the new file has no record of what changed. This pipeline checks each release against a written data contract before anyone uses it:
 - maps changing file formats to one schema and counts every fix
-- runs 25 validation rules in SQL
+- runs 26 validation rules in SQL
 - quarantines failed records with the rule that caught them
 - compares the release with the previous quarter, loan by loan
 - writes an HTML quality report and a machine-readable JSON file.
@@ -16,7 +16,7 @@ The U.S. Small Business Administration republishes its loan-level 7(a) data ever
 
 ## What it found in the June 2026 release
 
-**1. The publisher changed the file format between quarters, without notice.**
+**1. The publisher changed the file format between quarters.**
 
 | | March 2026 | June 2026 |
 |---|---|---|
@@ -27,7 +27,7 @@ The U.S. Small Business Administration republishes its loan-level 7(a) data ever
 | Loan status | `PIF` | `P I F` (923,144 loans) |
 | Extra column | `subprogram` | none |
 
-A naive join of the two releases on ZIP or date would silently match almost nothing. The contract maps both formats to one schema, and the report counts each fix.
+A naive join of the two releases on the raw dates would match nothing, and one on ZIP codes would miss 124,041 loans. The contract maps both formats to one schema, and the report counts each fix.
 
 **2. 22 rows are quarantined; 44,497 (2.7%) are flagged.**
 - **Quarantined (errors):**
@@ -60,7 +60,7 @@ A naive join of the two releases on ZIP or date would silently match almost noth
 
 ```
 contract.yaml ──► ingest ──► normalize ──► validate ──► split ──► diff ──► report
-   (schema,       (all text,  (typed, every  (25 SQL     (clean /   (previous   (HTML +
+   (schema,       (all text,  (typed, every  (26 SQL     (clean /   (previous   (HTML +
     rules,         stable     fix counted)    rules,      flagged /  release)    JSON)
     PII flags)     row ids)                   per row)    quarantine)
 ```
