@@ -10,9 +10,13 @@ a file, which the pipeline can still validate, but the counts in the sample repo
 from __future__ import annotations
 
 import hashlib
+import shutil
+import ssl
 import sys
 import urllib.request
 from pathlib import Path
+
+import certifi
 
 BASE = "https://data.sba.gov/sites/default/files/uploaded_resources"
 RAW = Path(__file__).resolve().parents[1] / "data" / "raw"
@@ -24,6 +28,13 @@ FILES = {
     "FOIA_7a_FY2010_FY2019_asof_260630.csv": "01a3e2c7988a6f4052e53f218a309feb2ec2fe42887bebdc0fa94ac8b1024ade",
     "FOIA_7a_FY2020_Present_asof_260630.csv": "6c1e9132b5141a19f82bdc8ccafb86c9a01662461cad41ddb36a3cf409d8a4fe",
 }
+
+
+def download(url: str, path: Path) -> None:
+    # certifi's CA bundle: python.org's macOS builds ship without root certificates.
+    ctx = ssl.create_default_context(cafile=certifi.where())
+    with urllib.request.urlopen(url, context=ctx) as r, open(path, "wb") as f:
+        shutil.copyfileobj(r, f)
 
 
 def sha256(path: Path) -> str:
@@ -41,7 +52,7 @@ def main() -> int:
         path = RAW / name
         if not path.exists():
             print(f"downloading {name}")
-            urllib.request.urlretrieve(f"{BASE}/{name}", path)
+            download(f"{BASE}/{name}", path)
         ok = sha256(path) == expected
         print(f"{'ok      ' if ok else 'CHANGED '} {name}")
         if not ok:
