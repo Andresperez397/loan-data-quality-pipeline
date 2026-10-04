@@ -50,7 +50,7 @@ def table(df: pd.DataFrame, cols: dict, num: set | None = None) -> str:
 
 def render(result: dict, path_html, path_json) -> None:
     with open(path_json, "w") as f:
-        json.dump(result, f, indent=2, default=str)
+        json.dump(result, f, indent=2, default=str, allow_nan=False)
     cur, prev = result["current"], result.get("previous")
     s = cur["split"]
     tiles = [
@@ -68,9 +68,7 @@ def render(result: dict, path_html, path_json) -> None:
         "<a href='https://github.com/Andresperez397/loan-data-quality-pipeline'>loan-data-quality-pipeline</a>."
         " Borrower names and street addresses are dropped on read and appear nowhere in the outputs.</p>",
         "<div class='tiles'>"
-        + "".join(
-            f"<div class='tile'><div class='v'>{v}</div><div class='l'>{lab}</div></div>" for lab, v in tiles
-        )
+        + "".join(f"<div class='tile'><div class='v'>{v}</div><div class='l'>{lab}</div></div>" for lab, v in tiles)
         + "</div>",
     ]
 

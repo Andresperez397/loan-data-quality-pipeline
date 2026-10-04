@@ -29,15 +29,14 @@ def run_rules(con, table: str, contract: dict) -> pd.DataFrame:
     rows = []
     for r in contract["rules"]:
         cond = f"COALESCE(({rule_sql(r, contract)}), FALSE)"
-        con.execute(
-            f"INSERT INTO failures SELECT row_id, '{r['id']}', '{r['severity']}' FROM {table} WHERE {cond}"
-        )
+        con.execute(f"INSERT INTO failures SELECT row_id, '{r['id']}', '{r['severity']}' FROM {table} WHERE {cond}")
         k = con.execute(f"SELECT count(*) FROM failures WHERE rule_id = '{r['id']}'").fetchone()[0]
         cols = [c for c in r["columns"] if c != "snapshot_key"]
         example = None
         if k and cols:
-            ex = con.execute(f"SELECT {', '.join(cols)} FROM {table} WHERE {cond} LIMIT 1").fetchdf()
-            example = "; ".join(f"{c}={ex.iloc[0][c]}" for c in cols)
+            shown = ", ".join(f"CAST({c} AS VARCHAR) AS {c}" for c in cols)
+            ex = con.execute(f"SELECT {shown} FROM {table} WHERE {cond} ORDER BY row_id LIMIT 1").fetchone()
+            example = "; ".join(f"{c}={v if v is not None else 'missing'}" for c, v in zip(cols, ex, strict=True))
         rows.append(
             {
                 "rule_id": r["id"],

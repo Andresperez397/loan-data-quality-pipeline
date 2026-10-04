@@ -25,8 +25,7 @@ def compare(con, prev: str, curr: str, contract: dict) -> dict:
     ).fetchdf()
     out["matching"] = {k: int(v) for k, v in m.iloc[0].items()}
     new_by_fy = con.execute(
-        "SELECT approval_fy, count(*) n FROM u_c ANTI JOIN u_p USING (snapshot_key) "
-        "GROUP BY 1 ORDER BY 1 DESC"
+        "SELECT approval_fy, count(*) n FROM u_c ANTI JOIN u_p USING (snapshot_key) GROUP BY 1 ORDER BY 1 DESC"
     ).fetchdf()
     out["new_loans_by_fy"] = {
         int(a): int(b) for a, b in zip(new_by_fy["approval_fy"], new_by_fy["n"], strict=True) if pd.notna(a)
@@ -38,11 +37,11 @@ def compare(con, prev: str, curr: str, contract: dict) -> dict:
     tr = con.execute("""SELECT p.loan_status AS previous, c.loan_status AS current, count(*) AS loans
                         FROM u_p p JOIN u_c c USING (snapshot_key)
                         WHERE p.loan_status IS DISTINCT FROM c.loan_status
-                        GROUP BY ALL ORDER BY loans DESC""").fetchdf()
+                        GROUP BY ALL ORDER BY loans DESC, previous, current""").fetchdf()
     out["status_transitions"] = tr.to_dict(orient="records")
     term = con.execute("""SELECT c.loan_status AS status_now, count(*) AS loans
                           FROM u_p p JOIN u_c c USING (snapshot_key)
-                          WHERE p.term_months IS DISTINCT FROM c.term_months GROUP BY 1 ORDER BY 2 DESC""").fetchdf()
+                          WHERE p.term_months IS DISTINCT FROM c.term_months GROUP BY 1 ORDER BY 2 DESC, 1""").fetchdf()
     out["term_changes_by_status"] = term.to_dict(orient="records")
     # Changes that should not happen to an approval-time field, for example a loan that moved backwards.
     back = con.execute("""SELECT count(*) FROM u_p p JOIN u_c c USING (snapshot_key)
@@ -57,8 +56,6 @@ def null_rate_drift(con, prev: str, curr: str, contract: dict) -> pd.DataFrame:
     for name in contract["columns"]:
         if contract["columns"][name].get("pii"):
             continue
-        a, b = (
-            con.execute(f"SELECT avg(({name} IS NULL)::int) FROM {t}").fetchone()[0] for t in (prev, curr)
-        )
+        a, b = (con.execute(f"SELECT avg(({name} IS NULL)::int) FROM {t}").fetchone()[0] for t in (prev, curr))
         rows.append({"column": name, "null_previous": a, "null_current": b, "change": b - a})
     return pd.DataFrame(rows)

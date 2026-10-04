@@ -9,4 +9,5 @@ select = ["E", "F", "W", "B", "I"]
 "tests/*" = ["E402"]
 
 [tool.pytest.ini_options]
+pythonpath = ["src", "tests/fixtures"]
 testpaths = ["tests"]

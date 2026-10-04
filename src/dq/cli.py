@@ -46,7 +46,8 @@ def run(current: str, previous: str | None, out: Path, contract_path: Path) -> d
     if previous:
         result["previous"] = process(con, previous, "prev", contract)
     result["current"] = process(con, current, "curr", contract)
-    result["current"]["rules"] = validate.run_rules(con, "curr", contract).to_dict(orient="records")
+    rules = validate.run_rules(con, "curr", contract)
+    result["current"]["rules"] = rules.astype(object).where(rules.notna(), None).to_dict(orient="records")
     result["current"]["split"] = validate.split(con, "curr", contract, out)
     if previous:
         result["diff"] = diff.compare(con, "prev", "curr", contract)
@@ -54,8 +55,7 @@ def run(current: str, previous: str | None, out: Path, contract_path: Path) -> d
         big = nd[nd["change"].abs() > 0.01]
         result["schema_drift"] = {
             "null_rate_shifts": ", ".join(
-                f"{r.column} ({100 * r.null_previous:.1f}% to {100 * r.null_current:.1f}%)"
-                for r in big.itertuples()
+                f"{r.column} ({100 * r.null_previous:.1f}% to {100 * r.null_current:.1f}%)" for r in big.itertuples()
             ),
             "null_rates": nd.to_dict(orient="records"),
         }
@@ -72,9 +72,7 @@ def main() -> None:
     a = p.parse_args()
     r = run(a.current, a.previous, Path(a.out), Path(a.contract))
     s = r["current"]["split"]
-    print(
-        f"{s['rows']:,} rows: {s['clean']:,} clean, {s['quarantined']:,} quarantined, {s['flagged']:,} flagged"
-    )
+    print(f"{s['rows']:,} rows: {s['clean']:,} clean, {s['quarantined']:,} quarantined, {s['flagged']:,} flagged")
 
 
 if __name__ == "__main__":

@@ -43,9 +43,7 @@ def read_raw(con: duckdb.DuckDBPyConnection, files: list[str], table: str) -> Sc
             header = fh.readline()
         quoted = header.startswith('"')
         lower = header.replace('"', "").split(",")[0] == header.replace('"', "").split(",")[0].lower()
-        styles.append(
-            f"{Path(f).name}: {'quoted' if quoted else 'unquoted'}, {'lowercase' if lower else 'CamelCase'}"
-        )
+        styles.append(f"{Path(f).name}: {'quoted' if quoted else 'unquoted'}, {'lowercase' if lower else 'CamelCase'}")
     file_list = ", ".join(f"'{f}'" for f in files)
     # Each row gets a stable id at load time; every later step joins on it.
     con.execute(f"""CREATE OR REPLACE TABLE {table} AS
@@ -60,11 +58,9 @@ def check_schema(con, table: str, contract: dict, report: SchemaReport) -> Schem
     expected = {c["source"]: name for name, c in contract["columns"].items()}
     for src, name in expected.items():
         if src not in present:
-            (
-                report.missing_required
-                if contract["columns"][name].get("required")
-                else report.missing_optional
-            ).append(name)
+            (report.missing_required if contract["columns"][name].get("required") else report.missing_optional).append(
+                name
+            )
     report.unexpected = sorted(present - set(expected))
     return report
 
@@ -72,6 +68,11 @@ def check_schema(con, table: str, contract: dict, report: SchemaReport) -> Schem
 def _date(expr: str, formats: list[str]) -> str:
     fmts = ", ".join(f"'{f}'" for f in formats)
     return f"TRY_STRPTIME(NULLIF(TRIM({expr}), ''), [{fmts}])::DATE"
+
+
+def _count(condition: str, alias: str) -> str:
+    # COALESCE: a column that is empty in every row would otherwise sum to NULL.
+    return f"COALESCE(sum(({condition})::int), 0) AS {alias}"
 
 
 def normalize(con, raw: str, out: str, contract: dict) -> dict:
@@ -92,8 +93,7 @@ def normalize(con, raw: str, out: str, contract: dict) -> dict:
         if t == "date":
             expr = _date(c, norm["date_formats"])
             counts_sql.append(
-                f"sum((regexp_matches({c}, '^[0-9]{{1,2}}/[0-9]{{1,2}}/[0-9]{{4}}$'))::int) "
-                f"AS {name}__us_date_format"
+                _count(f"regexp_matches({c}, '^[0-9]{{1,2}}/[0-9]{{1,2}}/[0-9]{{4}}$')", f"{name}__us_date_format")
             )
         elif t == "number":
             expr = f"TRY_CAST(NULLIF(TRIM({c}), '') AS DOUBLE)"
@@ -101,26 +101,19 @@ def normalize(con, raw: str, out: str, contract: dict) -> dict:
             expr = f"TRY_CAST(TRY_CAST(NULLIF(TRIM({c}), '') AS DOUBLE) AS INTEGER)"
         elif t == "boolean":
             expr = (
-                f"CASE WHEN UPPER(TRIM({c})) IN ({trues}) THEN TRUE "
-                f"WHEN UPPER(TRIM({c})) IN ({falses}) THEN FALSE END"
+                f"CASE WHEN UPPER(TRIM({c})) IN ({trues}) THEN TRUE WHEN UPPER(TRIM({c})) IN ({falses}) THEN FALSE END"
             )
-            counts_sql.append(
-                f"sum((UPPER(TRIM({c})) IN ('TRUE','FALSE'))::int) AS {name}__true_false_coding"
-            )
+            counts_sql.append(_count(f"UPPER(TRIM({c})) IN ('TRUE','FALSE')", f"{name}__true_false_coding"))
         elif t == "zip":
             expr = (
                 f"CASE WHEN regexp_matches(TRIM({c}), '^[0-9]{{3,4}}$') THEN lpad(TRIM({c}), 5, '0') "
                 f"ELSE NULLIF(LEFT(TRIM({c}), 5), '') END"
             )
-            counts_sql.append(
-                f"sum((regexp_matches(TRIM({c}), '^[0-9]{{3,4}}$'))::int) AS {name}__lost_leading_zero"
-            )
+            counts_sql.append(_count(f"regexp_matches(TRIM({c}), '^[0-9]{{3,4}}$')", f"{name}__lost_leading_zero"))
         elif t == "status":
             expr = f"CASE {status_map.format(c=c)} ELSE NULLIF(TRIM({c}), '') END"
-            counts_sql.append(
-                f"sum((TRIM({c}) IN ({', '.join(repr(k) for k in norm['loan_status'])}))::int) "
-                f"AS {name}__respelled"
-            )
+            spellings = ", ".join(repr(k) for k in norm["loan_status"])
+            counts_sql.append(_count(f"TRIM({c}) IN ({spellings})", f"{name}__respelled"))
         else:
             expr = f"NULLIF(TRIM({c}), '')"
         select.append(f"{expr} AS {name}")
@@ -133,10 +126,7 @@ def normalize(con, raw: str, out: str, contract: dict) -> dict:
     parse_fail = []
     for name, col in contract["columns"].items():
         if col["source"] in present and col["type"] in ("date", "number", "integer", "boolean"):
-            parse_fail.append(
-                f"sum((NULLIF(TRIM(r.\"{col['source']}\"), '') IS NOT NULL AND n.{name} IS NULL)::int)"
-                f" AS {name}"
-            )
+            parse_fail.append(_count(f"NULLIF(TRIM(r.\"{col['source']}\"), '') IS NOT NULL AND n.{name} IS NULL", name))
     if parse_fail:
         row = (
             con.execute(f"SELECT {', '.join(parse_fail)} FROM {raw} r JOIN {out} n ON r.__row = n.row_id")
