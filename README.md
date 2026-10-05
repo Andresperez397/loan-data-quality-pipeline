@@ -132,3 +132,9 @@ tests/                    synthetic fixtures with planted problems, pytest suite
 scripts/fetch_data.py     download and checksum the two releases
 reports/                  sample report (HTML, PDF, JSON, preview image)
 ```
+
+## Data and license
+
+- **Data:** U.S. Small Business Administration 7(a) loan-level FOIA data (U.S. Government Works, public domain). Raw files are not committed; `scripts/fetch_data.py` downloads them and checks their SHA-256 checksums. Borrower names and street addresses are never written to any output.
+- **Code:** MIT (see `LICENSE`).
+- **Affiliation:** not affiliated with or endorsed by the SBA.
