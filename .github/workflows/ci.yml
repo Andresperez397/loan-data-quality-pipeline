@@ -19,3 +19,7 @@ jobs:
       - name: Fixtures match their generator
         run: python tests/fixtures/make_fixtures.py && git diff --exit-code tests/fixtures
       - run: pytest -q
+      - name: Both shipped contracts lint clean
+        run: |
+          PYTHONPATH=src python -m dq.cli --lint --contract config/contract.yaml
+          PYTHONPATH=src python -m dq.cli --lint --contract examples/online_retail/contract.yaml

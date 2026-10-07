@@ -11,7 +11,7 @@ from pathlib import Path
 
 import duckdb
 
-from . import diff, ingest, report, validate
+from . import diff, ingest, lint, report, validate
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -34,6 +34,9 @@ def process(con, pattern: str, name: str, contract: dict) -> dict:
 def run(current: str, previous: str | None, out: Path, contract_path: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     contract = ingest.load_contract(contract_path)
+    problems = lint.lint(contract)
+    if problems:
+        raise SystemExit("contract problems:\n  " + "\n  ".join(problems))
     con = duckdb.connect()
     result = {
         "dataset": contract["dataset"],
@@ -63,16 +66,35 @@ def run(current: str, previous: str | None, out: Path, contract_path: Path) -> d
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--current", required=True, help="glob for the snapshot to validate")
+    p.add_argument("--lint", action="store_true", help="check the contract and exit")
+    p.add_argument(
+        "--max-quarantine-rate", type=float, help="exit with code 2 if more rows than this share are quarantined"
+    )
+    p.add_argument("--max-flagged-rate", type=float, help="exit with code 2 if more rows than this share are flagged")
+    p.add_argument("--current", help="glob for the snapshot to validate")
     p.add_argument("--previous", help="glob for the earlier snapshot to compare against")
     p.add_argument("--out", default=str(ROOT / "output"))
     p.add_argument("--contract", default=str(ROOT / "config" / "contract.yaml"))
     a = p.parse_args()
+    if a.lint:
+        problems = lint.lint(ingest.load_contract(a.contract))
+        print("\n".join(problems) if problems else "contract OK")
+        raise SystemExit(1 if problems else 0)
+    if not a.current:
+        p.error("--current is required unless --lint is given")
     r = run(a.current, a.previous, Path(a.out), Path(a.contract))
     s = r["current"]["split"]
     print(
         f"{s['rows']:,} rows: {s['clean']:,} in clean table, {s['quarantined']:,} quarantined, {s['flagged']:,} flagged"
     )
+    breaches = []
+    if a.max_quarantine_rate is not None and s["quarantined"] / s["rows"] > a.max_quarantine_rate:
+        breaches.append(f"quarantine rate {s['quarantined'] / s['rows']:.4%} is above {a.max_quarantine_rate:.4%}")
+    if a.max_flagged_rate is not None and s["flagged"] / s["rows"] > a.max_flagged_rate:
+        breaches.append(f"flagged rate {s['flagged'] / s['rows']:.4%} is above {a.max_flagged_rate:.4%}")
+    if breaches:
+        print("QUALITY GATE FAILED: " + "; ".join(breaches))
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

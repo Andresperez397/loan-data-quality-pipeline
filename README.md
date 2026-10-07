@@ -110,15 +110,21 @@ PYTHONPATH=src python -m dq.cli --current data/retail/release_2010_2011.csv \
 
 On 541,910 lines it quarantines 2 (negative unit prices, the "adjust bad debt" entries), flags 12,658 (1,454 without a description, 1,336 negative-quantity write-offs on non-cancellation invoices, 1,179 free items, 10,153 lines repeated within the day) and counts 135,080 lines without a customer ID as known. The diff finds exactly what the file's structure predicts: the later release repeats the first nine days of December 2010, so 21,906 lines match and the rest appear in one release only.
 
+## Running it unattended
+
+- **Lint a contract first:** `python -m dq.cli --lint --contract path/to/contract.yaml` checks structure, column names and that every rule's SQL compiles against the schema. It caught a real bug in this project's own second contract (an unquoted comma that silently split a rule's description). Every run lints before it touches data.
+- **Gate a pipeline:** `--max-quarantine-rate 0.001 --max-flagged-rate 0.05` makes the command exit with code 2 and print `QUALITY GATE FAILED` when a release breaches a limit, so a scheduler or CI job can stop before bad data is used.
+
 ## Tests
 
-Two small synthetic releases in [tests/fixtures](tests/fixtures), one in each real file format, carry planted problems: a guarantee above the loan amount, an invalid state, an unparseable date, a charge-off date without charged-off status, an out-of-range rate, a future approval date, a low rate, a bad NAICS code, a duplicate key, a dropped ZIP leading zero, a missing rate on a recent loan, a rewritten term, a reopened loan, a revised key field and a missing required column. The 24 tests check that:
+Two small synthetic releases in [tests/fixtures](tests/fixtures), one in each real file format, carry planted problems: a guarantee above the loan amount, an invalid state, an unparseable date, a charge-off date without charged-off status, an out-of-range rate, a future approval date, a low rate, a bad NAICS code, a duplicate key, a dropped ZIP leading zero, a missing rate on a recent loan, a rewritten term, a reopened loan, a revised key field and a missing required column. The 29 tests check that:
 - both formats map to the contract and each fix is counted
 - each planted problem is caught by its rule, and clean loans fail nothing
 - quarantine holds exactly the error rows, with the right rule ids
 - the snapshot diff finds the new, removed, changed, reopened and probably revised loans
 - a missing required column stops the run
 - outputs contain no personal fields, and the JSON is strict (no `NaN`)
+- the contract linter catches duplicate rule ids, bad severities, unknown columns, uncompilable SQL and split YAML values, and the quality gate exits with code 2 when a limit is breached
 - a second contract (retail) finds its own planted problems through the same code, with contract-driven report wording.
 
 Building the tests and rerunning the full data surfaced three bugs, each now covered:

@@ -145,7 +145,7 @@
         "rule_id": "X2",
         "check": "consistency",
         "severity": "warning",
-        "description": "Negative quantity on an invoice that is not a cancellation (a stock write-off",
+        "description": "Negative quantity on an invoice that is not a cancellation (a stock write-off, not a sale)",
         "failed": 1336,
         "rows": 541910,
         "fail_rate": 0.0024653540255762025,
