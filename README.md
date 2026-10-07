@@ -2,6 +2,14 @@
 
 [![tests](https://github.com/Andresperez397/loan-data-quality-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Andresperez397/loan-data-quality-pipeline/actions/workflows/ci.yml)
 
+## At a glance
+
+- **Question:** What breaks, changes or goes missing when a public 1.6-million-row loan dataset is republished every quarter?
+- **Answer:** SBA changed the file format between releases (124,041 ZIP codes lost a leading zero), 22 rows failed hard checks, 44,497 were flagged, 200 loans looked like revised copies of old ones, and 73 loans that had been resolved reopened.
+- **Why it matters:** It is a pattern for any recurring data feed: a written contract, rule-based checks, quarantine of bad records and a release-to-release diff, with every number traceable.
+- **Start here:** [Sample quality report (PDF)](reports/quality_report.pdf) · [the data contract](config/contract.yaml)
+
+
 The U.S. Small Business Administration republishes its loan-level 7(a) data every quarter. Each release replaces the last, so a user who loads the new file has no record of what changed. This pipeline checks each release against a written data contract before anyone uses it:
 - maps changing file formats to one schema and counts every fix
 - runs 26 validation rules in SQL
