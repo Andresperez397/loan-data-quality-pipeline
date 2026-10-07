@@ -15,14 +15,6 @@ from . import diff, ingest, report, validate
 
 ROOT = Path(__file__).resolve().parents[2]
 
-NOTES = [
-    "Term (months) is not a reliable approval-time field: SBA rewrites it for some loans after approval. Rule K1 "
-    "counts non-standard terms, and section 3 shows terms changing between quarters.",
-    "Interest rates are missing for most loans approved through FY2009 (rule C4). That is a property of the "
-    "source, so it is counted as info; a missing rate on a later loan is a warning (rule C6).",
-    "Active loans have status EXEMPT because SBA withholds their status under FOIA exemption 4.",
-]
-
 
 def process(con, pattern: str, name: str, contract: dict) -> dict:
     files = sorted(glob.glob(pattern))
@@ -34,7 +26,8 @@ def process(con, pattern: str, name: str, contract: dict) -> dict:
         raise SystemExit(f"required columns missing in {name}: {sr.missing_required}")
     counts = ingest.normalize(con, f"raw_{name}", name, contract)
     validate.add_snapshot_key(con, name, contract)
-    as_of = con.execute(f"SELECT max(as_of_date) FROM {name}").fetchone()[0]
+    as_of_col = contract.get("as_of", {}).get("column", "as_of_date")
+    as_of = con.execute(f"SELECT max({as_of_col}) FROM {name}").fetchone()[0]
     return {"files": sr.files, "as_of": str(as_of), "schema": sr.__dict__, "normalizations": counts}
 
 
@@ -42,7 +35,12 @@ def run(current: str, previous: str | None, out: Path, contract_path: Path) -> d
     out.mkdir(parents=True, exist_ok=True)
     contract = ingest.load_contract(contract_path)
     con = duckdb.connect()
-    result = {"dataset": contract["dataset"], "notes": NOTES}
+    result = {
+        "dataset": contract["dataset"],
+        "contract_version": contract.get("version"),
+        "report": contract.get("report", {}),
+        "notes": contract.get("report", {}).get("notes", []),
+    }
     if previous:
         result["previous"] = process(con, previous, "prev", contract)
     result["current"] = process(con, current, "curr", contract)

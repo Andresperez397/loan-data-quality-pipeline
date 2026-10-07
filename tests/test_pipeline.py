@@ -110,8 +110,8 @@ def test_snapshot_diff(loaded, contract):
     assert d["changed_fields"]["term_months"] == 1  # L5
     assert d["changed_fields"]["loan_status"] == 2  # L3, L4
     assert d["changed_fields"]["naics_code"] == 0
-    assert d["resolved_loans_reopened"] == 1  # L4
-    assert d["probable_key_revisions"]["loans"] == 1  # L9
+    assert d["resolved_reopened"] == 1  # L4
+    assert d["probable_key_revisions"]["records"] == 1  # L9
     assert d["probable_key_revisions"]["changed"]["jobs_supported"] == 1
     assert not set(d["changed_fields"]) & set(contract["snapshot_key"])
 

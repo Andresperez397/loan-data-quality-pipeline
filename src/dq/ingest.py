@@ -81,7 +81,7 @@ def normalize(con, raw: str, out: str, contract: dict) -> dict:
     norm = contract["normalize"]
     trues = ", ".join(f"'{v}'" for v in norm["boolean_true"])
     falses = ", ".join(f"'{v}'" for v in norm["boolean_false"])
-    status_map = " ".join(f"WHEN TRIM({{c}}) = '{k}' THEN '{v}'" for k, v in norm["loan_status"].items())
+    status_map = " ".join(f"WHEN TRIM({{c}}) = '{k}' THEN '{v}'" for k, v in norm.get("status_map", {}).items())
     select, counts_sql = ["__row AS row_id"], []
     for name, col in contract["columns"].items():
         src = col["source"]
@@ -112,7 +112,7 @@ def normalize(con, raw: str, out: str, contract: dict) -> dict:
             counts_sql.append(_count(f"regexp_matches(TRIM({c}), '^[0-9]{{3,4}}$')", f"{name}__lost_leading_zero"))
         elif t == "status":
             expr = f"CASE {status_map.format(c=c)} ELSE NULLIF(TRIM({c}), '') END"
-            spellings = ", ".join(repr(k) for k in norm["loan_status"])
+            spellings = ", ".join(repr(k) for k in norm.get("status_map", {}))
             counts_sql.append(_count(f"TRIM({c}) IN ({spellings})", f"{name}__respelled"))
         else:
             expr = f"NULLIF(TRIM({c}), '')"

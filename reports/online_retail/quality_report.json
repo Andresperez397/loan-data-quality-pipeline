@@ -1,0 +1,262 @@
+{
+  "dataset": "UCI Online Retail II invoice lines",
+  "contract_version": "1.0",
+  "report": {
+    "title": "Data quality report",
+    "entity": "invoice lines",
+    "entity_singular": "invoice line",
+    "match_description": "invoice, product, quantity, price, customer and day",
+    "expected_change": "Nothing about a past invoice line should change.",
+    "labels": {
+      "stock_code": "stock code",
+      "invoice_ts": "invoice date",
+      "customer_id": "customer ID"
+    },
+    "notes": [
+      "The two sheets overlap: the later release repeats 1-9 December 2010. Matched lines are those repeats; every other line appears in one release only, which is expected for a transactional extract.",
+      "Invoices starting with C are cancellations (negative quantity). Codes such as POST, M, D and BANK CHARGES are fees and adjustments, not products (rule K1).",
+      "About 23% of lines have no customer ID (rule C2, counted as info): they are guest or wholesale-account sales the source does not attribute."
+    ]
+  },
+  "notes": [
+    "The two sheets overlap: the later release repeats 1-9 December 2010. Matched lines are those repeats; every other line appears in one release only, which is expected for a transactional extract.",
+    "Invoices starting with C are cancellations (negative quantity). Codes such as POST, M, D and BANK CHARGES are fees and adjustments, not products (rule K1).",
+    "About 23% of lines have no customer ID (rule C2, counted as info): they are guest or wholesale-account sales the source does not attribute."
+  ],
+  "previous": {
+    "files": [
+      "release_2009_2010.csv"
+    ],
+    "as_of": "2010-12-09",
+    "schema": {
+      "files": [
+        "release_2009_2010.csv"
+      ],
+      "rows": 525461,
+      "header_style": [
+        "release_2009_2010.csv: unquoted, CamelCase"
+      ],
+      "missing_required": [],
+      "missing_optional": [],
+      "unexpected": []
+    },
+    "normalizations": {}
+  },
+  "current": {
+    "files": [
+      "release_2010_2011.csv"
+    ],
+    "as_of": "2011-12-09",
+    "schema": {
+      "files": [
+        "release_2010_2011.csv"
+      ],
+      "rows": 541910,
+      "header_style": [
+        "release_2010_2011.csv: unquoted, CamelCase"
+      ],
+      "missing_required": [],
+      "missing_optional": [],
+      "unexpected": []
+    },
+    "normalizations": {},
+    "rules": [
+      {
+        "rule_id": "C1",
+        "check": "completeness",
+        "severity": "error",
+        "description": "Invoice number is missing",
+        "failed": 0,
+        "rows": 541910,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "C2",
+        "check": "completeness",
+        "severity": "info",
+        "description": "Customer ID is missing",
+        "failed": 135080,
+        "rows": 541910,
+        "fail_rate": 0.2492664833643963,
+        "example": "customer_id=missing"
+      },
+      {
+        "rule_id": "C3",
+        "check": "completeness",
+        "severity": "warning",
+        "description": "Product description is missing",
+        "failed": 1454,
+        "rows": 541910,
+        "fail_rate": 0.002683102360170508,
+        "example": "description=missing"
+      },
+      {
+        "rule_id": "V1",
+        "check": "validity",
+        "severity": "error",
+        "description": "Quantity is zero",
+        "failed": 0,
+        "rows": 541910,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "V2",
+        "check": "validity",
+        "severity": "error",
+        "description": "Unit price is negative",
+        "failed": 2,
+        "rows": 541910,
+        "fail_rate": 3.690649738886531e-06,
+        "example": "price=-11062.06"
+      },
+      {
+        "rule_id": "V3",
+        "check": "validity",
+        "severity": "warning",
+        "description": "Free item (price zero on a positive quantity)",
+        "failed": 1179,
+        "rows": 541910,
+        "fail_rate": 0.00217563802107361,
+        "example": "price=0.0; quantity=56"
+      },
+      {
+        "rule_id": "V4",
+        "check": "validity",
+        "severity": "warning",
+        "description": "Invoice number is not six digits with an optional A or C prefix",
+        "failed": 0,
+        "rows": 541910,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "X1",
+        "check": "consistency",
+        "severity": "warning",
+        "description": "Cancellation invoice (starts with C) with a positive quantity",
+        "failed": 0,
+        "rows": 541910,
+        "fail_rate": 0.0,
+        "example": null
+      },
+      {
+        "rule_id": "X2",
+        "check": "consistency",
+        "severity": "warning",
+        "description": "Negative quantity on an invoice that is not a cancellation (a stock write-off",
+        "failed": 1336,
+        "rows": 541910,
+        "fail_rate": 0.0024653540255762025,
+        "example": "invoice=536589; quantity=-10"
+      },
+      {
+        "rule_id": "K1",
+        "check": "known_issue",
+        "severity": "info",
+        "description": "Stock code is a fee, postage or adjustment rather than a product",
+        "failed": 2947,
+        "rows": 541910,
+        "fail_rate": 0.005438172390249303,
+        "example": "stock_code=POST; description=POSTAGE"
+      },
+      {
+        "rule_id": "U1",
+        "check": "uniqueness",
+        "severity": "warning",
+        "description": "Identical line repeated (cannot be tracked between releases)",
+        "failed": 10153,
+        "rows": 541910,
+        "fail_rate": 0.018735583399457474,
+        "example": null
+      }
+    ],
+    "split": {
+      "rows": 541910,
+      "quarantined": 2,
+      "flagged": 12658,
+      "clean": 541908,
+      "pii_columns_dropped": []
+    }
+  },
+  "diff": {
+    "rows": {
+      "previous": 525461,
+      "current": 541910,
+      "change": 16449
+    },
+    "matching": {
+      "matched": 21906,
+      "only_previous": 490270,
+      "only_current": 509851,
+      "ambiguous_previous": 13285,
+      "ambiguous_current": 10153
+    },
+    "changed_fields": {
+      "description": 0,
+      "country": 0
+    },
+    "key_fields": [
+      "invoice",
+      "stock_code",
+      "quantity",
+      "price",
+      "customer_id",
+      "invoice_ts"
+    ]
+  },
+  "schema_drift": {
+    "null_rate_shifts": "customer_id (20.5% to 24.9%)",
+    "null_rates": [
+      {
+        "column": "invoice",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "stock_code",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "description",
+        "null_previous": 0.005572249891048051,
+        "null_current": 0.002683102360170508,
+        "change": -0.0028891475308775428
+      },
+      {
+        "column": "quantity",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "invoice_ts",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "price",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      },
+      {
+        "column": "customer_id",
+        "null_previous": 0.20539488182757618,
+        "null_current": 0.2492664833643963,
+        "change": 0.043871601536820126
+      },
+      {
+        "column": "country",
+        "null_previous": 0.0,
+        "null_current": 0.0,
+        "change": 0.0
+      }
+    ]
+  }
+}

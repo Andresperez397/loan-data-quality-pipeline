@@ -21,6 +21,7 @@ The U.S. Small Business Administration republishes its loan-level 7(a) data ever
 
 **Data:** SBA 7(a) loan-level FOIA data, snapshots as of 2026-03-31 (1,610,065 loans) and 2026-06-30 (1,624,422 loans), public domain.
 **Stack:** Python, DuckDB (SQL), YAML data contract, pytest, GitHub Actions.
+**Works on any dataset:** nothing in `src/dq` is specific to loans. A second contract, for the UCI Online Retail II invoice lines, runs through the same code ([sample report](reports/online_retail/quality_report.html)).
 
 ![Report preview](reports/report_preview.png)
 
@@ -83,6 +84,7 @@ contract.yaml ──► ingest ──► normalize ──► validate ──► 
 
   Version 1.0 was committed before the first validation run. Every later change has a changelog entry:
   - **v1.1:** added the three freely associated states SBA serves (Marshall Islands, Micronesia, Palau), after the first run flagged 16 loans coded MH.
+  - **v1.3:** no rule changed. Everything loan-specific in the diff and report moved into the contract's `compare`, `report` and `as_of` sections, so the same code runs any contract.
   - **v1.2:** fixed two descriptions that YAML had cut at a comma; a test now rejects any rule with an unexpected key. Also corrected the missing-rate rule's wording, and added a warning for missing rates on recent loans (8 found) and a looser key for reporting probable revisions.
 - **Nothing coerced silently.** Raw files are read as text. Each normalization is explicit and counted: date formats, yes/no codes, status spellings, ZIP padding. Values that fail to parse are counted separately.
 - **Three severities:**
@@ -96,15 +98,28 @@ contract.yaml ──► ingest ──► normalize ──► validate ──► 
 - **Personal data never leaves the pipeline.** Borrower names and street addresses are read only to be dropped. Tests check that no fixture name or address appears in any output.
 - **Deterministic outputs.** The same input always produces byte-identical reports. Rule examples and ties are ordered explicitly.
 
+## A second dataset: the same pipeline, a different contract
+
+[examples/online_retail/contract.yaml](examples/online_retail/contract.yaml) describes the Online Retail II invoice lines (two sheets treated as two releases). The only change from the loan run is the contract:
+
+```bash
+python examples/online_retail/prepare_data.py            # downloads the workbook, writes two CSV releases
+PYTHONPATH=src python -m dq.cli --current data/retail/release_2010_2011.csv \
+  --previous data/retail/release_2009_2010.csv --contract examples/online_retail/contract.yaml --out output/retail
+```
+
+On 541,910 lines it quarantines 2 (negative unit prices, the "adjust bad debt" entries), flags 12,658 (1,454 without a description, 1,336 negative-quantity write-offs on non-cancellation invoices, 1,179 free items, 10,153 lines repeated within the day) and counts 135,080 lines without a customer ID as known. The diff finds exactly what the file's structure predicts: the later release repeats the first nine days of December 2010, so 21,906 lines match and the rest appear in one release only.
+
 ## Tests
 
-Two small synthetic releases in [tests/fixtures](tests/fixtures), one in each real file format, carry planted problems: a guarantee above the loan amount, an invalid state, an unparseable date, a charge-off date without charged-off status, an out-of-range rate, a future approval date, a low rate, a bad NAICS code, a duplicate key, a dropped ZIP leading zero, a missing rate on a recent loan, a rewritten term, a reopened loan, a revised key field and a missing required column. The 20 tests check that:
+Two small synthetic releases in [tests/fixtures](tests/fixtures), one in each real file format, carry planted problems: a guarantee above the loan amount, an invalid state, an unparseable date, a charge-off date without charged-off status, an out-of-range rate, a future approval date, a low rate, a bad NAICS code, a duplicate key, a dropped ZIP leading zero, a missing rate on a recent loan, a rewritten term, a reopened loan, a revised key field and a missing required column. The 24 tests check that:
 - both formats map to the contract and each fix is counted
 - each planted problem is caught by its rule, and clean loans fail nothing
 - quarantine holds exactly the error rows, with the right rule ids
 - the snapshot diff finds the new, removed, changed, reopened and probably revised loans
 - a missing required column stops the run
-- outputs contain no personal fields, and the JSON is strict (no `NaN`).
+- outputs contain no personal fields, and the JSON is strict (no `NaN`)
+- a second contract (retail) finds its own planted problems through the same code, with contract-driven report wording.
 
 Building the tests and rerunning the full data surfaced three bugs, each now covered:
 - a crash when a column was empty in every row (found by the fixtures)
@@ -135,7 +150,8 @@ The full run takes about a minute on a laptop. It writes `output/quality_report.
 
 ```
 config/contract.yaml      data contract: schema, PII flags, allowed values, rules, changelog
-src/dq/                   ingest.py, validate.py, diff.py, report.py, cli.py
+src/dq/                   ingest.py, validate.py, diff.py, report.py, cli.py (all contract-driven)
+examples/online_retail/   a second contract and its data-preparation script
 tests/                    synthetic fixtures with planted problems, pytest suite
 scripts/fetch_data.py     download and checksum the two releases
 reports/                  sample report (HTML, PDF, JSON, preview image)

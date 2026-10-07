@@ -1,1 +1,1 @@
-"""Data quality pipeline for the SBA 7(a) loan-level FOIA extract."""
+"""Contract-driven data quality pipeline: schema mapping, SQL rules, quarantine, release-to-release diff, report."""

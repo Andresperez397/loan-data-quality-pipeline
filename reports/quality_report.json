@@ -1,5 +1,37 @@
 {
   "dataset": "SBA 7(a) loan-level FOIA data",
+  "contract_version": "1.3",
+  "report": {
+    "title": "Data quality report",
+    "entity": "loans",
+    "entity_singular": "loan",
+    "source_link": "https://github.com/Andresperez397/loan-data-quality-pipeline",
+    "privacy_note": "Borrower names and street addresses are dropped on read and appear nowhere in the outputs.",
+    "match_description": "fields fixed at approval (date, amounts, ZIP, state, jobs, rate)",
+    "expected_change": "Status and dates are expected to change; the others were fixed at approval.",
+    "reopen_note": "loans that were resolved in the earlier snapshot (paid in full or charged off) are active or undisbursed again in the later one. A resolved loan should not reopen, so these are worth raising with the publisher.",
+    "labels": {
+      "naics_code": "NAICS code",
+      "project_county": "county",
+      "business_type": "business type",
+      "term_months": "term (months)",
+      "loan_status": "loan status",
+      "charge_off_date": "charge-off date",
+      "paid_in_full_date": "paid-in-full date",
+      "sba_guaranteed": "SBA guarantee",
+      "jobs_supported": "jobs supported",
+      "interest_rate": "interest rate",
+      "approval_date": "approval date",
+      "gross_approval": "loan amount",
+      "borrower_zip": "borrower ZIP",
+      "project_state": "project state"
+    },
+    "notes": [
+      "Term (months) is not a reliable approval-time field: SBA rewrites it for some loans after approval. Rule K1 counts non-standard terms, and section 3 shows terms changing between quarters.",
+      "Interest rates are missing for most loans approved through FY2009 (rule C4). That is a property of the source, so it is counted as info; a missing rate on a later loan is a warning (rule C6).",
+      "Active loans have status EXEMPT because SBA withholds their status under FOIA exemption 4."
+    ]
+  },
   "notes": [
     "Term (months) is not a reliable approval-time field: SBA rewrites it for some loans after approval. Rule K1 counts non-standard terms, and section 3 shows terms changing between quarters.",
     "Interest rates are missing for most loans approved through FY2009 (rule C4). That is a property of the source, so it is counted as info; a missing rate on a later loan is a warning (rule C6).",
@@ -354,7 +386,7 @@
       "ambiguous_previous": 16459,
       "ambiguous_current": 16509
     },
-    "new_loans_by_fy": {
+    "new_by_group": {
       "2026": 14569,
       "2025": 76,
       "2024": 52,
@@ -391,99 +423,102 @@
       {
         "previous": "EXEMPT",
         "current": "PIF",
-        "loans": 9277
+        "n": 9277
       },
       {
         "previous": "COMMIT",
         "current": "EXEMPT",
-        "loans": 8159
+        "n": 8159
       },
       {
         "previous": "COMMIT",
         "current": "CANCLD",
-        "loans": 3355
+        "n": 3355
       },
       {
         "previous": "EXEMPT",
         "current": "CHGOFF",
-        "loans": 1790
+        "n": 1790
       },
       {
         "previous": "CHGOFF",
         "current": "PIF",
-        "loans": 253
+        "n": 253
       },
       {
         "previous": "PIF",
         "current": "EXEMPT",
-        "loans": 59
+        "n": 59
       },
       {
         "previous": "COMMIT",
         "current": "PIF",
-        "loans": 48
+        "n": 48
       },
       {
         "previous": "CHGOFF",
         "current": "EXEMPT",
-        "loans": 14
+        "n": 14
       },
       {
         "previous": "CANCLD",
         "current": "EXEMPT",
-        "loans": 7
+        "n": 7
       },
       {
         "previous": "PIF",
         "current": "CHGOFF",
-        "loans": 4
+        "n": 4
       },
       {
         "previous": "CANCLD",
         "current": "COMMIT",
-        "loans": 3
+        "n": 3
       },
       {
         "previous": "EXEMPT",
         "current": "COMMIT",
-        "loans": 2
+        "n": 2
       },
       {
         "previous": "CANCLD",
         "current": "PIF",
-        "loans": 1
+        "n": 1
       },
       {
         "previous": "PIF",
         "current": "CANCLD",
-        "loans": 1
+        "n": 1
       }
     ],
-    "term_changes_by_status": [
-      {
-        "status_now": "EXEMPT",
-        "loans": 1129
-      },
-      {
-        "status_now": "COMMIT",
-        "loans": 63
-      },
-      {
-        "status_now": "CANCLD",
-        "loans": 44
-      },
-      {
-        "status_now": "PIF",
-        "loans": 38
-      },
-      {
-        "status_now": "CHGOFF",
-        "loans": 13
-      }
-    ],
-    "resolved_loans_reopened": 73,
+    "changes_by_status": {
+      "field": "term_months",
+      "rows": [
+        {
+          "status_now": "EXEMPT",
+          "n": 1129
+        },
+        {
+          "status_now": "COMMIT",
+          "n": 63
+        },
+        {
+          "status_now": "CANCLD",
+          "n": 44
+        },
+        {
+          "status_now": "PIF",
+          "n": 38
+        },
+        {
+          "status_now": "CHGOFF",
+          "n": 13
+        }
+      ]
+    },
+    "resolved_reopened": 73,
     "probable_key_revisions": {
-      "loans": 200,
+      "records": 200,
       "loose_key": [
         "approval_date",
         "gross_approval",

@@ -18,8 +18,11 @@ def add_snapshot_key(con, table: str, contract: dict) -> None:
 
 
 def rule_sql(rule: dict, contract: dict) -> str:
-    states = ", ".join(f"'{s}'" for s in contract["allowed"]["states"])
-    return rule["sql"].replace("{states}", states)
+    sql = rule["sql"]
+    # {name} placeholders expand to the quoted list in contract["allowed"][name] (for example {states}).
+    for name, values in contract.get("allowed", {}).items():
+        sql = sql.replace("{" + name + "}", ", ".join(f"'{v}'" for v in values))
+    return sql
 
 
 def run_rules(con, table: str, contract: dict) -> pd.DataFrame:

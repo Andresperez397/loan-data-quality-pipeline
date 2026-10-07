@@ -1,0 +1,77 @@
+# Data contract for the UCI Online Retail II invoice-line extract: a second dataset for the same pipeline.
+#
+# Nothing in src/dq is specific to this file or to the SBA loan contract. Run it with:
+#   python -m dq.cli --current 'data/retail/release_2010_2011.csv' --previous 'data/retail/release_2009_2010.csv' \
+#       --contract examples/online_retail/contract.yaml --out output/retail
+
+dataset: UCI Online Retail II invoice lines
+version: "1.0"
+changelog:
+  - "1.0 (2026-10-07): first version, written from the data audit of the retail case study before the first run."
+publisher: UCI Machine Learning Repository (Chen, 2019), CC BY 4.0
+
+columns:
+  invoice:     {source: invoice, type: string, required: true}
+  stock_code:  {source: stockcode, type: string, required: true}
+  description: {source: description, type: string}
+  quantity:    {source: quantity, type: integer, required: true}
+  invoice_ts:  {source: invoicedate, type: date, required: true}
+  price:       {source: price, type: number, required: true}
+  customer_id: {source: customer_id, type: string}
+  country:     {source: country, type: string}
+
+normalize:
+  date_formats: ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
+  boolean_true: ["TRUE"]
+  boolean_false: ["FALSE"]
+
+# One invoice line: the same line must be identical in both releases. Dates are compared to the day.
+snapshot_key: [invoice, stock_code, quantity, price, customer_id, invoice_ts]
+
+compare:
+  tracked_fields: [description, country]
+
+as_of: {column: invoice_ts}
+
+report:
+  title: Data quality report
+  entity: invoice lines
+  entity_singular: invoice line
+  match_description: "invoice, product, quantity, price, customer and day"
+  expected_change: Nothing about a past invoice line should change.
+  labels:
+    stock_code: stock code
+    invoice_ts: invoice date
+    customer_id: customer ID
+  notes:
+    - "The two sheets overlap: the later release repeats 1-9 December 2010. Matched lines are those repeats; every other line appears in one release only, which is expected for a transactional extract."
+    - "Invoices starting with C are cancellations (negative quantity). Codes such as POST, M, D and BANK CHARGES are fees and adjustments, not products (rule K1)."
+    - "About 23% of lines have no customer ID (rule C2, counted as info): they are guest or wholesale-account sales the source does not attribute."
+
+rules:
+  - {id: C1, severity: error, check: completeness, columns: [invoice],
+     description: Invoice number is missing, sql: "invoice IS NULL"}
+  - {id: C2, severity: info, check: completeness, columns: [customer_id],
+     description: Customer ID is missing, sql: "customer_id IS NULL"}
+  - {id: C3, severity: warning, check: completeness, columns: [description],
+     description: Product description is missing, sql: "description IS NULL"}
+  - {id: V1, severity: error, check: validity, columns: [quantity],
+     description: Quantity is zero, sql: "quantity = 0"}
+  - {id: V2, severity: error, check: validity, columns: [price],
+     description: Unit price is negative, sql: "price < 0"}
+  - {id: V3, severity: warning, check: validity, columns: [price, quantity],
+     description: Free item (price zero on a positive quantity), sql: "price = 0 AND quantity > 0"}
+  - {id: V4, severity: warning, check: validity, columns: [invoice],
+     description: "Invoice number is not six digits with an optional A or C prefix",
+     sql: "invoice IS NOT NULL AND NOT regexp_matches(invoice, '^[AC]?[0-9]{6}$')"}
+  - {id: X1, severity: warning, check: consistency, columns: [invoice, quantity],
+     description: Cancellation invoice (starts with C) with a positive quantity,
+     sql: "invoice LIKE 'C%' AND quantity > 0"}
+  - {id: X2, severity: warning, check: consistency, columns: [invoice, quantity],
+     description: Negative quantity on an invoice that is not a cancellation (a stock write-off, not a sale),
+     sql: "invoice NOT LIKE 'C%' AND quantity < 0"}
+  - {id: K1, severity: info, check: known_issue, columns: [stock_code, description],
+     description: "Stock code is a fee, postage or adjustment rather than a product",
+     sql: "upper(stock_code) IN ('POST','DOT','C2','M','D','S','B','BANK CHARGES','ADJUST','ADJUST2','AMAZONFEE','CRUK','TEST001','TEST002') OR upper(stock_code) LIKE 'GIFT%'"}
+  - {id: U1, severity: warning, check: uniqueness, columns: [snapshot_key],
+     description: Identical line repeated (cannot be tracked between releases), sql: "key_count > 1"}

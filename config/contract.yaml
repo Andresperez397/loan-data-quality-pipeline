@@ -11,7 +11,7 @@
 #   info    - counted in the report only (known features of the source)
 
 dataset: SBA 7(a) loan-level FOIA data
-version: "1.2"
+version: "1.3"
 changelog:
   - "1.0 (2026-10-04): first version, written before any validation ran."
   - "1.1 (2026-10-04): added MH, FM and PW (the freely associated states served by SBA) to allowed state codes
@@ -21,6 +21,8 @@ changelog:
     unaffected). Corrected C4: rates are missing through FY2009, not only before it. Added C6 after the run
     showed 8 loans approved since FY2024 with no rate. Added loose_key, to report probable key revisions
     instead of guessing at them."
+  - "1.3 (2026-10-07): no rule changed. Added the `compare`, `report` and `as_of` sections so the diff and the report are
+    driven by the contract instead of loan-specific code; approval_time_fields became compare.tracked_fields."
 publisher: U.S. Small Business Administration
 expected_as_of_format: date
 
@@ -70,7 +72,7 @@ columns:
 
 # Value normalization applied before validation; every change is counted in the report.
 normalize:
-  loan_status: {"P I F": "PIF"}
+  status_map: {"P I F": "PIF"}
   boolean_true: ["Y", "TRUE", "T", "1"]
   boolean_false: ["N", "FALSE", "F", "0"]
   date_formats: ["%Y-%m-%d", "%m/%d/%Y"]
@@ -86,8 +88,51 @@ allowed:
 # Fields fixed at approval: used to match the same loan across snapshots and expected not to change.
 snapshot_key: [approval_date, gross_approval, sba_guaranteed, borrower_zip, project_state, jobs_supported,
                interest_rate]
-# Fields fixed at approval that are NOT part of the key; a change in a key field shows up as an unmatched pair.
-approval_time_fields: [naics_code, project_county, business_type, term_months]
+# Two-release comparison. tracked_fields are compared for records matched on the key; fields fixed at approval are
+# NOT part of the key here, because a change in a key field shows up as an unmatched pair. resolved -> reopened
+# status changes are suspicious (a resolved loan should not become active again).
+compare:
+  tracked_fields: [naics_code, project_county, business_type, term_months, loan_status, charge_off_date, paid_in_full_date]
+  status_field: loan_status
+  resolved: [PIF, CHGOFF]
+  reopened: [EXEMPT, COMMIT]
+  group_field: approval_fy
+  breakdown: {field: term_months}
+
+# Where the snapshot date comes from.
+as_of: {column: as_of_date}
+
+# Wording used in the report.
+report:
+  title: Data quality report
+  entity: loans
+  entity_singular: loan
+  source_link: https://github.com/Andresperez397/loan-data-quality-pipeline
+  privacy_note: Borrower names and street addresses are dropped on read and appear nowhere in the outputs.
+  match_description: "fields fixed at approval (date, amounts, ZIP, state, jobs, rate)"
+  expected_change: Status and dates are expected to change; the others were fixed at approval.
+  reopen_note: >-
+    loans that were resolved in the earlier snapshot (paid in full or charged off) are active or undisbursed
+    again in the later one. A resolved loan should not reopen, so these are worth raising with the publisher.
+  labels:
+    naics_code: NAICS code
+    project_county: county
+    business_type: business type
+    term_months: term (months)
+    loan_status: loan status
+    charge_off_date: charge-off date
+    paid_in_full_date: paid-in-full date
+    sba_guaranteed: SBA guarantee
+    jobs_supported: jobs supported
+    interest_rate: interest rate
+    approval_date: approval date
+    gross_approval: loan amount
+    borrower_zip: borrower ZIP
+    project_state: project state
+  notes:
+    - "Term (months) is not a reliable approval-time field: SBA rewrites it for some loans after approval. Rule K1 counts non-standard terms, and section 3 shows terms changing between quarters."
+    - "Interest rates are missing for most loans approved through FY2009 (rule C4). That is a property of the source, so it is counted as info; a missing rate on a later loan is a warning (rule C6)."
+    - "Active loans have status EXEMPT because SBA withholds their status under FOIA exemption 4."
 # A looser key: an unmatched new loan that matches an unmatched removed loan on these fields is probably the same
 # loan with a revised key field. Reported as a count, never used to merge records.
 loose_key: [approval_date, gross_approval, borrower_zip, project_state]
